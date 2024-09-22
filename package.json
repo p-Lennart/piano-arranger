@@ -1,0 +1,23 @@
+{
+  "name": "piano-arranger",
+  "version": "1.0.0",
+  "description": "Peter Edvardsson, Launchpad project Fall 2024",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/p-Lennart/piano-arranger.git"
+  },
+  "keywords": [
+    "piano",
+    "arranging"
+  ],
+  "author": "Peter Edvardsson",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/p-Lennart/piano-arranger/issues"
+  },
+  "homepage": "https://github.com/p-Lennart/piano-arranger#readme"
+}
