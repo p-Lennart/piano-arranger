@@ -34,6 +34,37 @@ class MelodyRhythm extends RhythmPattern {
         return res;
     }
 
+    synchronizedAccomp() {
+        let resArr = this.value;
+        
+        for (let i = this.value.length - 1; i >= 0; i--) {
+            if (this.value[i] === "s") {
+                
+                resArr[i] = "u"; // Upbeat on strong beats
+
+                if (resArr[i - 1] && this.value[i - 1] !== "s") { // One-unit leadup (downbeat) to upbeat, if applicable
+                    resArr[i - 1] = "d";
+                }
+                
+                if (resArr[i - 2] && this.value[i - 2] !== "s") { // Two-unit leadup (downbeat-upbeat) to upbeat, if applicable
+                    resArr[i - 2] = "d";
+                    resArr[i - 1] = "u";
+                }                
+                
+            } else if (resArr[i] === "w") { // Rest during weak beats
+                resArr[i] = "-";
+            }
+
+        }
+        
+        resArr[0] = "d"; // Start with downbeat
+        resArr[1] = "-"; // Leave gap after start downbeat
+
+        let resVal = RhythmPattern.stringify(resArr, this.groupSize);
+        let res = new AccompRhythm(resVal);
+        return res;
+    }
+
 }
 
 module.exports = MelodyRhythm;
