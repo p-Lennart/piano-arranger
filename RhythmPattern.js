@@ -28,10 +28,15 @@ class RhythmPattern {
     }
 
     toString() { // Separate groups of groupSize with a comma
+        return RhythmPattern.stringify(this.value, this.groupSize);
+    }
+
+    static stringify(rpValue, rpGroupSize) {
         let out = "";
-        for (let i = 0; i < this.value.length; i++) {
-            out += this.value[i];
-            if (i % this.groupSize == this.groupSize - 1 && i !== this.value.length - 1) {
+        
+        for (let i = 0; i < rpValue.length; i++) {
+            out += rpValue[i];
+            if (i % rpGroupSize == rpGroupSize - 1 && i !== rpValue.length - 1) {
                 out += ","
             }
         }
