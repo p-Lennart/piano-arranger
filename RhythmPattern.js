@@ -16,15 +16,45 @@ class RhythmPattern {
                 }
 
             } else {
-
-                if (!this.beatmap[char]) {
-                    this.beatmap[char] = [];
-                }
-    
-                this.beatmap[char].push(i);
                 this.value.push(char);
             }
         }
+
+        this.writeBeatmap();
+    }
+
+    writeBeatmap() {
+        this.beatmap = {};
+        
+        for (let i = 0; i < this.value.length; i++) {
+            if (!this.beatmap[this.value[i]]) {
+                this.beatmap[this.value[i]] = [];
+            }
+
+            this.beatmap[this.value[i]].push(i);
+        }
+
+        return this.beatmap;
+    }
+
+    getBeats(key) {
+        return this.beatmap[key];
+    }
+
+    setBeats(key, indices) {
+        for (let ind of indices) {
+            this.value[ind] = key;
+        }
+
+        return this.writeBeatmap();
+    }
+
+    getRests() {
+        return this.getBeats('-');
+    }
+
+    setRests(indices) {
+        return this.setBeats('-', indices);
     }
 
     toString() { // Separate groups of groupSize with a comma
