@@ -9,11 +9,19 @@ class AccompRhythm extends RhythmPattern {
     }
 
     getDownbeats() {
-        return this.beatmap["d"];
+        return super.getBeats("d");
     }
 
     getUpbeats() {
-        return this.beatmap["u"];
+        return super.getBeats("u");
+    }
+
+    setDownbeats(indices) {
+        return super.setBeats("d", indices);
+    }
+
+    setUpbeats(indices) {
+        return super.setBeats("u", indices);
     }
 
     static presets = [
