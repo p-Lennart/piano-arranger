@@ -3,6 +3,12 @@ class RhythmPattern {
     constructor(valueStr) { // Init from string representation
         this.value = [];
         this.beatmap = {};
+        this.groupSize = 4; // Default value
+
+        this.fromString(valueStr);
+    }
+
+    fromString(valueStr) {
         this.groupSize = valueStr.indexOf(",");
 
         for (let i = 0; i < valueStr.length; i++) {
@@ -19,8 +25,25 @@ class RhythmPattern {
                 this.value.push(char);
             }
         }
-
+        
         this.writeBeatmap();
+    }
+
+    toString() { // Separate groups of groupSize with a comma
+        return RhythmPattern.stringify(this.value, this.groupSize);
+    }
+    
+    static stringify(rpValue, rpGroupSize) {
+        let out = "";
+        
+        for (let i = 0; i < rpValue.length; i++) {
+            out += rpValue[i];
+            if (i % rpGroupSize == rpGroupSize - 1 && i !== rpValue.length - 1) {
+                out += ","
+            }
+        }
+
+        return out;
     }
 
     writeBeatmap() {
@@ -55,23 +78,6 @@ class RhythmPattern {
 
     setRests(indices) {
         return this.setBeats('-', indices);
-    }
-
-    toString() { // Separate groups of groupSize with a comma
-        return RhythmPattern.stringify(this.value, this.groupSize);
-    }
-
-    static stringify(rpValue, rpGroupSize) {
-        let out = "";
-        
-        for (let i = 0; i < rpValue.length; i++) {
-            out += rpValue[i];
-            if (i % rpGroupSize == rpGroupSize - 1 && i !== rpValue.length - 1) {
-                out += ","
-            }
-        }
-
-        return out;
     }
 
 }
