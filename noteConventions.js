@@ -30,7 +30,7 @@ module.exports = {
             "F": ["F", "G", "A", flat("B"), "C", "D", "E"],
             "G": ["G", "A", "B", "C", "D", "E", sharp("F")],
             "A": ["A", "B", sharp("C"), "D", "E", sharp("F"), sharp("G")],
-            "B": ["B", sharp("C"), sharp("D"), E, sharp("F"), sharp("G"), sharp("A")],
+            "B": ["B", sharp("C"), sharp("D"), "E", sharp("F"), sharp("G"), sharp("A")],
         };
         scales[flat("D")] = [flat("D"), flat("E"), "F", flat("G"), flat("A"), flat("B"), "C"];
         scales[flat("E")] = [flat("E"), "F", "G", flat("A"), flat("B"), "C", "D"];

@@ -22,8 +22,10 @@ class Note {
         let noteChar = noteString.slice(ind1, ind1 + 1);
         if (noteString.includes(conventions.sharp(noteChar))) {
             offset = 1;
+            ind2 += 1;
         } else if (noteString.includes(conventions.flat(noteChar))) {
             offset = -1;
+            ind2 += 1;
         }
 
         let res = conventions.noteChars[noteChar];
