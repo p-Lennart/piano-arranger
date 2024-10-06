@@ -1,71 +1,115 @@
-const conventions = require('./NoteConventions.js');
+function sharp(label) {
+    return `${label}#`;
+}
+
+function flat(label) {
+    return `${label}b`;
+}
+
+let noteChars = { // Octave -1
+    "C": 0,
+    "D": 2,
+    "E": 4,
+    "F": 5,
+    "G": 7,
+    "A": 9,
+    "B": 11,
+}
+
+let accidentalPerKey = {
+    "C": "#",
+    "Db": "b",
+    "D": "#",
+    "Eb": "b",
+    "E": "#",
+    "F": "#",
+    "F#": "#",
+    "G": "#",
+    "Ab": "b",
+    "A": "#",
+    "Bb": "b",
+    "B": "#",
+}
 
 class Note {
 
-    constructor(input) { // Init from string representation
+    constructor(input, secondary) { // Init from string representation
         this.value = 21; // Default value A0
         
         if (typeof input === "number") {
-            this.value = input;
+            if (secondary) {
+                this.fromNoteOctave(input, secondary);
+            } else {
+                this.fromValue(input);
+            }
         } else {
             this.fromString(input);
         }
     }
 
-    fromString(noteString) {
-        let template = conventions.note("A", -1);
-        let ind1 = template.indexOf("A");
-        let ind2 = template.indexOf("-1");
-        
-        let offset = 0;
+    fromValue(noteValue) {
+        this.value = noteValue;
+    }
 
-        let noteChar = noteString.slice(ind1, ind1 + 1);
-        if (noteString.includes(conventions.sharp(noteChar))) {
-            offset = 1;
-            ind2 += 1;
-        } else if (noteString.includes(conventions.flat(noteChar))) {
-            offset = -1;
-            ind2 += 1;
+    fromNoteOctave(noteLabel, octave) {
+        let noteChar = noteLabel.slice(0, 1);
+        
+        let res = noteChars[noteChar];
+        res += (octave + 1) * 12; // Account for -1 octave
+        
+        if (noteLabel.slice(1, 2) === "#") {
+            res += 1;
+        } else if (noteLabel.slice(1, 2) === "b") {
+            res -= 1;
         }
 
-        let res = conventions.noteChars[noteChar];
+        this.fromValue(res);
+    }
 
-        let octave = parseInt(noteString.slice(ind2));
-        res += (octave + 1) * 12; // Account for -1 octave
-        res += offset;
-
-        this.value = res;
+    fromString(noteString) {
+        let octInd = 1;
+        if (["#", "b"].includes(noteString)) {
+            octInd = 2;
+        }
+        this.fromNoteOctave(
+            noteString.slice(0, -1),
+            parseInt(noteString.slice(octInd)));
     }
 
     toString(scaleArr) {
-        return conventions.note(this.getNoteLabel(scaleArr), this.getOctave());
+        return this.getNoteLabel(scaleArr) + this.getOctave();
     }
 
-    getOctave() {
-        return Math.floor(this.value / 12) - 1;
+    
+    increment(increment) {
+        return new Note(this.value + increment);
     }
-
-    getNoteLabel(scaleNote) { // Takes scale string
+    
+    getValue() {
+        return this.value;
+    }
+    
+    getNoteLabel(key) { // Takes scale string
         let normalized = this.value % 12;
         let closest = this.findClosestNotes(normalized);
         
         if (closest.length > 1) {
-            let sharped = conventions.sharp(closest[0]);
-            let flatted = conventions.flat(closest[1]);
-            
-            let scaleArr = conventions.scale(scaleNote);
-            if (scaleArr.includes(flatted)) {
-                return flatted;
+            if (accidentalPerKey[key] === "b") {
+                return flat(closest[1]);
             } else {
-                return sharped;
+                return sharp(closest[0]);
             }
         }
         
         return closest[0];
     }
 
+    getOctave() {
+        return Math.floor(this.value / 12) - 1;
+    }
+
     findClosestNotes(normalizedValue) {
-        let labelEntries = Object.entries(conventions.noteChars);
+        let labelEntries = Object.entries(noteChars);
 
         for (let i = 0; i < labelEntries.length; i++) {
             if (normalizedValue === labelEntries[i][1]) {
