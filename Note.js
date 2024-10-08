@@ -36,21 +36,26 @@ class Note {
     constructor(input, secondary) { // Init from string representation
         this.value = 21; // Default value A0
         
-        if (typeof input === "number") {
-            if (secondary) {
-                this.fromNoteOctave(input, secondary);
-            } else {
-                this.fromValue(input);
-            }
+        if (secondary) {
+            this.fromNoteOctave(input, secondary);
         } else {
-            this.fromString(input);
+            if (typeof input === "number") {
+                this.fromValue(input);
+            } else {
+                this.fromString(input);
+            }
         }
     }
 
-    fromValue(noteValue) {
-        this.value = noteValue;
+    fromString(noteString) {
+        let octInd = 1;
+        if (["#", "b"].includes(noteString)) {
+            octInd = 2;
+        }
+        this.fromNoteOctave(noteString.slice(0, octInd),
+            parseInt(noteString.slice(octInd)));
     }
-
+    
     fromNoteOctave(noteLabel, octave) {
         let noteChar = noteLabel.slice(0, 1);
         
@@ -66,35 +71,34 @@ class Note {
         this.fromValue(res);
     }
 
-    fromString(noteString) {
-        let octInd = 1;
-        if (["#", "b"].includes(noteString)) {
-            octInd = 2;
-        }
-        this.fromNoteOctave(
-            noteString.slice(0, -1),
-            parseInt(noteString.slice(octInd)));
+    fromValue(noteValue) {
+        this.value = noteValue;
     }
 
-    toString(scaleArr) {
-        return this.getNoteLabel(scaleArr) + this.getOctave();
+    toString(key) {
+        return this.getNoteLabel(key) + this.getOctave();
     }
-
     
-    increment(increment) {
-        return new Note(this.value + increment);
+    transpose(interval) {
+        return new Note(this.value + interval);
     }
     
     getValue() {
         return this.value;
     }
     
-    getNoteLabel(key) { // Takes scale string
+    getNoteLabel(key, minor) { // Takes key note char
         let normalized = this.value % 12;
         let closest = this.findClosestNotes(normalized);
         
         if (closest.length > 1) {
-            if (accidentalPerKey[key] === "b") {
+            let keyAccInd = Object.keys(accidentalPerKey).indexOf(key);
+
+            if (minor) {
+                keyAccInd = (keyAccInd + 3) % Object.keys(accidentalPerKey).length;
+            }
+
+            if (Object.values(accidentalPerKey)[keyAccInd] === "b") {
                 return flat(closest[1]);
             } else {
                 return sharp(closest[0]);

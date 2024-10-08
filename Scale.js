@@ -1,58 +1,58 @@
+const Note = require("./Note");
+
 class Scale {
 
-    constructor(increments, minor) { // Init from string representation
-        this.value = [];
-        this.minor = false;
-        if (minor) {
-            this.minor = true;
+    constructor(keyLabel, basis, minor) { // Init from string representation
+        this.basis = [];
+        this.minor = minor && minor === true;
+
+        this.keyLabel = keyLabel;
+        this.rootNote = new Note(this.keyLabel, -1);
+
+        for (let component of basis) {
+            if (!this.basis.includes(component % 12)) {
+                this.basis.push(component);
+            }
         }
-        
-        for (let inc of increments) {
-            if (!this.value.includes(inc % increments.length)) {
-                this.value.push(inc);
+
+        this.span = [];
+        for (let oct = -1; oct <= 9; oct++) {
+            for (let component of this.basis) {
+                let octaveShift = (oct + 1) * 12;
+                
+                let componentNote = this.rootNote.transpose(component + octaveShift);
+                this.span.push(componentNote);
             }
         }
     }
 
-    static scales = {
-        "major": new Scale([0, 2, 4, 5, 7, 9, 11]),
-        "minor": new Scale([0, 2, 3, 5, 7, 8, 10], true),
+    static bases = {
+        "major": [0, 2, 4, 5, 7, 9, 11],
+        "minor": [0, 2, 3, 5, 7, 8, 10],
+        "pentatonic": [0, 2, 4, 7, 9],
+        "blues": [0, 3, 5, 6, 7, 10],
     }
 
-    nextInScale(startNote) {
-        return this.nextWithInterval(startNote, 1);
-    }
-
-    nextWithInterval(startNote, interval, baseNote) {
-        let scaleNotes = apply(baseNote);
-        let pos = scaleNotes.findIndex(n => n.getValue === startNote.getValue);
-        return new Note(scaleNotes[pos + interval]);
-    }
-
-    getNoteLabels(noteLabel) {
-        let baseNote = new Note(noteLabel, -1);
-        return this.value.map(absIncr => {
-            return baseNote.increment(absIncr).getNoteLabel();
+    getNoteLabels() {
+        let sample = this.span.slice(0, this.basis.length);
+        return sample.map(sampleNote => {
+            return sampleNote.getNoteLabel(this.keyLabel, this.minor);
         });
+    }
+
+    nextNote(startNote) {
+        return this.nextNoteByOffset(startNote, 1);
     }
     
-    apply(baseNote) {
-        return this.value.map(absIncr => {
-            return baseNote.increment(absIncr);
-        });
-    }
-
-    applyAll(noteLabel) {
-        let res = [];
-
-        for (let oct = -1; oct <= 9; oct++) {
-            let baseNote = new Note(noteLabel, -1);
-            res.concat(apply(baseNote));
+    nextNoteByOffset(startNote, offset) {
+        let pos = this.span.findIndex(spanNote => spanNote.getValue() === startNote.getValue());
+        if (pos === -1) {
+            return null;
         }
-
-        return res;
+        pos = (pos + offset) % this.span.length;
+        return this.span[pos];
     }
 
 }
 
-module.exports = Scales;
+module.exports = Scale;
