@@ -1,16 +1,32 @@
 const Note = require("./Note");
 
+const minorTranspose = new Map([
+    [4, 3],
+    [9, 8],
+    [11, 10],
+]);
+
 class Scale {
 
-    constructor(keyLabel, basis, minor) { // Init from string representation
-        this.basis = [];
-        this.minor = minor && minor === true;
-
+    constructor(keyLabel, basis, minor=false) { // Init from string representation
         this.keyLabel = keyLabel;
         this.rootNote = new Note(this.keyLabel, -1);
 
+        this.basis = [];
+        this.minor = minor;
+
+        if (minor) {
+            this.basis = Array.from(myMap.keys());
+        }
+
         for (let component of basis) {
-            if (!this.basis.includes(component % 12)) {
+            let normalized = component % 12;
+
+            if (minorTranspose.has(normalized)) {
+                normalized = minorTranspose.get(normalized);
+            }
+
+            if (!this.basis.includes(normalized)) {
                 this.basis.push(component);
             }
         }
@@ -28,9 +44,10 @@ class Scale {
 
     static bases = {
         "major": [0, 2, 4, 5, 7, 9, 11],
-        "minor": [0, 2, 3, 5, 7, 8, 10],
+        // minor [0, 2, 3, 5, 7, 8, 10],
+        "add2": [0, 2, 4, 7],
         "pentatonic": [0, 2, 4, 7, 9],
-        "blues": [0, 3, 5, 6, 7, 10],
+        "blues": [0, 2, 3, 4, 7, 9],
     }
 
     getNoteLabels() {
