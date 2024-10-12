@@ -1,9 +1,16 @@
 const Note = require("./Note");
 
-const minorTranspose = new Map([
+const minorTransposes = new Map([
     [4, 3],
     [9, 8],
     [11, 10],
+]);
+
+const minSpacings = new Map([
+    [new Note("A-1"), 12],
+    [new Note("A1"), 8],
+    [new Note("C2"), 2],
+    [new Note("A3"), 0],
 ]);
 
 class Scale {
@@ -11,35 +18,16 @@ class Scale {
     constructor(keyLabel, basis, minor=false) { // Init from string representation
         this.keyLabel = keyLabel;
         this.rootNote = new Note(this.keyLabel, -1);
-
+        
         this.basis = [];
         this.minor = minor;
-
-        if (minor) {
-            this.basis = Array.from(myMap.keys());
-        }
-
-        for (let component of basis) {
-            let normalized = component % 12;
-
-            if (minorTranspose.has(normalized)) {
-                normalized = minorTranspose.get(normalized);
-            }
-
-            if (!this.basis.includes(normalized)) {
-                this.basis.push(component);
-            }
-        }
+        this.setBasis(basis);
 
         this.span = [];
-        for (let oct = -1; oct <= 9; oct++) {
-            for (let component of this.basis) {
-                let octaveShift = (oct + 1) * 12;
-                
-                let componentNote = this.rootNote.transpose(component + octaveShift);
-                this.span.push(componentNote);
-            }
-        }
+        this.setSpan();
+
+        this.spacedSpan = [];
+        this.setSpacedSpan();
     }
 
     static bases = {
@@ -48,6 +36,67 @@ class Scale {
         "add2": [0, 2, 4, 7],
         "pentatonic": [0, 2, 4, 7, 9],
         "blues": [0, 2, 3, 4, 7, 9],
+    }
+
+    setBasis(basis) {
+        let result = [];
+
+        // if (this.minor) {
+        //     result = Array.from(minorTransposes.values());
+        // }
+
+        for (let component of basis) {
+            let normalized = component % 12;
+
+            if (minorTransposes.has(normalized)) {
+                normalized = minorTransposes.get(normalized);
+            }
+            
+            if (!result.includes(normalized)) {
+                result.push(normalized);
+            }
+        }
+        
+        this.basis = result.sort((a, b) => (a - b));
+    }
+
+    setSpan() {
+        let result = [];
+
+        for (let oct = -1; oct <= 9; oct++) {
+            for (let component of this.basis) {
+                let octaveShift = (oct + 1) * 12;
+                
+                let componentNote = this.rootNote.transpose(component + octaveShift);
+                result.push(componentNote);
+            }
+        }
+
+        this.span = result;
+    }
+
+    setSpacedSpan() {
+        let result = [this.span[0]];
+
+        for (let i = 1; i < this.span.length; i++) {
+            let lastNote = result[result.length - 1];
+            let thisNote = this.span[i];
+
+            let minSpacing = minSpacings.values[0];
+
+            for (const [key, value] of minSpacings) {
+                if (lastNote.compare(key) < 0) {
+                    break;
+                }
+                minSpacing = value;
+            }
+
+            if (thisNote.compare(lastNote) >= minSpacing) {
+                result.push(thisNote);
+            }
+        }
+
+        this.spacedSpan = result;
     }
 
     getNoteLabels() {

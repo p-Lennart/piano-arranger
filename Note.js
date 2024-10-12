@@ -82,6 +82,10 @@ class Note {
     transpose(interval) {
         return new Note(this.value + interval);
     }
+
+    compare(note) {
+        return this.value - note.value;
+    }
     
     getValue() {
         return this.value;
