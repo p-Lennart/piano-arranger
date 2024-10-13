@@ -10,6 +10,10 @@ class RhythmPattern {
 
     fromString(valueStr) {
         this.groupSize = valueStr.indexOf(",");
+        if (this.groupSize === -1) {
+            console.error("RhythmPattern has no group size, defaulting to groupSize=4");
+            this.groupSize = 4;
+        }
 
         for (let i = 0; i < valueStr.length; i++) {
             let char = valueStr[i];
