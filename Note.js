@@ -35,21 +35,23 @@ class Note {
 
     constructor(input, secondary) { // Init from string representation
         this.value = 21; // Default value A0
+        this.preferredKeyLabel = "C"; // Default value C major
         
         if (secondary) {
-            this.fromNoteOctave(input, secondary);
-        } else {
-            if (typeof input === "number") {
-                this.fromValue(input);
-            } else {
-                this.fromString(input);
-            }
+            this.preferredKeyLabel = secondary;
         }
+        
+        if (typeof input === "number") {
+            this.fromValue(input);
+        } else {
+            this.fromString(input);
+        }
+
     }
 
     fromString(noteString) {
         let octInd = 1;
-        if (["#", "b"].includes(noteString)) {
+        if (noteString.includes("#") || noteString.includes("b")) {
             octInd = 2;
         }
         this.fromNoteOctave(noteString.slice(0, octInd),
@@ -75,30 +77,44 @@ class Note {
         this.value = noteValue;
     }
 
-    toString(key) {
-        return this.getNoteLabel(key) + this.getOctave();
+    toString(keyLabel) {
+        return this.getNoteLabel(keyLabel) + this.getOctave();
     }
     
     transpose(interval) {
-        return new Note(this.value + interval);
+        let result = new Note(this.value + interval);
+        result.setPreferredKeyLabel(this.preferredKeyLabel);
+        return result;
     }
 
     compare(note) {
         return this.value - note.value;
     }
     
+    setPreferredKeyLabel(keyLabel) {
+        this.preferredKeyLabel = keyLabel;
+    }
+
     getValue() {
         return this.value;
     }
     
-    getNoteLabel(key, minor) { // Takes key note char
+    getNoteLabel(keyLabel) { // Takes key note char
         let normalized = this.value % 12;
         let closest = this.findClosestNotes(normalized);
         
         if (closest.length > 1) {
-            let keyAccInd = Object.keys(accidentalPerKey).indexOf(key);
+            if (!keyLabel) {
+                keyLabel = this.preferredKeyLabel;
+            }
 
-            if (minor) {
+            let keyIsMinor = keyLabel.endsWith("m");
+            if (keyIsMinor) {
+                keyLabel = keyLabel.slice(0, -1);
+            }
+
+            let keyAccInd = Object.keys(accidentalPerKey).indexOf(keyLabel);
+            if (keyIsMinor) {
                 keyAccInd = (keyAccInd + 3) % Object.keys(accidentalPerKey).length;
             }
 

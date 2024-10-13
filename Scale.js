@@ -15,12 +15,19 @@ const minSpacings = new Map([
 
 class Scale {
 
-    constructor(keyLabel, basis, minor=false) { // Init from string representation
+    constructor(keyLabel, basis) { // Init from string representation
         this.keyLabel = keyLabel;
-        this.rootNote = new Note(this.keyLabel, -1);
-        
+        this.minor = keyLabel.endsWith("m");
+
+        let noteLabel = keyLabel;
+        if (this.minor) {
+            noteLabel = keyLabel.slice(0, -1);
+        }
+
+        this.rootNote = new Note(noteLabel + "-1");
+        this.rootNote.setPreferredKeyLabel(keyLabel);
+
         this.basis = [];
-        this.minor = minor;
         this.setBasis(basis);
 
         this.span = [];
