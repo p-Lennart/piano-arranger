@@ -47,6 +47,7 @@ class Scale {
     static bases = {
         "major": [0, 2, 4, 5, 7, 9, 11],
         // minor [0, 2, 3, 5, 7, 8, 10],
+        "7th": [0, 4, 7, 10],
         "add2": [0, 2, 4, 7],
         "pentatonic": [0, 2, 4, 7, 9],
         "blues": [0, 2, 3, 4, 7, 9],
@@ -62,7 +63,7 @@ class Scale {
         for (let component of basis) {
             let normalized = component % 12;
 
-            if (minorTransposes.has(normalized)) {
+            if (this.minor && minorTransposes.has(normalized)) {
                 normalized = minorTransposes.get(normalized);
             }
             
