@@ -6,12 +6,19 @@ const minorTransposes = new Map([
     [11, 10],
 ]);
 
-const minSpacings = new Map([
-    [new Note("A-1"), 12],
-    [new Note("A1"), 8],
-    [new Note("C2"), 2],
-    [new Note("A3"), 0],
-]);
+const spanSpacings = [
+    [false, 0],  // Octave -1: no fifth, no "close notes"
+    [false, 0],  // Octave 0: no fifth, no "close notes"
+    [false, 0],  // Octave 1: no fifth, no "close notes"
+    [true, 0],  // Octave 2: use fifth, no "close notes"
+    [true, 2],  // Octave 3: use fifth, two "close notes"
+    [true, 3],  // Octave 4: use fifth, three "close notes"
+    [true, 4],  // Octave 5: use fifth, four "close notes"
+    [true, 10],  // Octave 6: use fifth, ten "close notes"
+    [true, 12],  // Octave 7: use fifth, twelve "close notes"
+    [true, 12],  // Octave 8: use fifth, twelve "close notes"
+    [true, 12],  // Octave 9: use fifth, twelve "close notes"
+];
 
 class Scale {
 
@@ -83,23 +90,25 @@ class Scale {
     }
 
     setSpacedSpan() {
-        let result = [this.span[0]];
+        let result = [];
 
-        for (let i = 1; i < this.span.length; i++) {
-            let lastNote = result[result.length - 1];
-            let thisNote = this.span[i];
+        for (let oct = -1; oct <= 9; oct++) {
+            let octaveShift = (oct + 1) * 12;
 
-            let minSpacing = minSpacings.values[0];
+            let [useFifth, closeNotes] = spanSpacings[oct + 1];
 
-            for (const [key, value] of minSpacings) {
-                if (lastNote.compare(key) < 0) {
-                    break;
+            let thisNote = this.rootNote.transpose(this.basis[0] + octaveShift);
+            result.push(thisNote);
+
+            for (let i = 1; i < this.basis.length; i++) {    
+                thisNote = this.rootNote.transpose(this.basis[i] + octaveShift);            
+                
+                if (useFifth && this.basis[i] == 7) {
+                    result.push(thisNote);
+                } else if (closeNotes > 0) {
+                    result.push(thisNote);
+                    closeNotes -= 1;   
                 }
-                minSpacing = value;
-            }
-
-            if (thisNote.compare(lastNote) >= minSpacing) {
-                result.push(thisNote);
             }
         }
 
