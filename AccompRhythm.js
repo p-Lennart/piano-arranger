@@ -1,6 +1,6 @@
-const RhythmPattern = require("./RhythmPattern");
+const RhythmSequence = require("./RhythmSequence");
 
-class AccompRhythm extends RhythmPattern {
+class AccompRhythm extends RhythmSequence {
 
     constructor(valueStr) {
         super(valueStr);

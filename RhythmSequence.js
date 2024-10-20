@@ -1,18 +1,18 @@
-class RhythmPattern {
+class RhythmSequence {
 
     constructor(valueStr) { // Init from string representation
         this.value = [];
         this.beatmap = {};
-        this.groupSize = 4; // Default value
+        this.subdivision = 4; // Default value
 
         this.fromString(valueStr);
     }
 
     fromString(valueStr) {
-        this.groupSize = valueStr.indexOf(",");
-        if (this.groupSize === -1) {
-            console.error("RhythmPattern has no group size, defaulting to groupSize=4");
-            this.groupSize = 4;
+        this.subdivision = valueStr.indexOf(",");
+        if (this.subdivision === -1) {
+            console.error("RhythmSequence has no subdivision value, defaulting to subdivision=4");
+            this.subdivision = 4;
         }
 
         for (let i = 0; i < valueStr.length; i++) {
@@ -20,9 +20,9 @@ class RhythmPattern {
 
             if (char === ",") {
 
-                if (i % this.groupSize !== 0 && this.groupSize !== 4) { // Check if comma-seperated group size is consistent from group to group
-                    console.error("RhythmPattern init string contains inconsistent group sizes, defaulting to groupSize=4");
-                    this.groupSize = 4;
+                if (i % this.subdivision !== 0 && this.subdivision !== 4) { // Check if comma-seperated group size is consistent from group to group
+                    console.error("RhythmSequence init string contains inconsistent subdivision values, defaulting to subdivision=4");
+                    this.subdivision = 4;
                 }
 
             } else {
@@ -33,8 +33,8 @@ class RhythmPattern {
         this.writeBeatmap();
     }
 
-    toString() { // Separate groups of groupSize with a comma
-        return RhythmPattern.stringify(this.value, this.groupSize);
+    toString() {
+        return RhythmSequence.stringify(this.value, this.subdivision);
     }
     
     static stringify(rpValue, rpGroupSize) {
@@ -42,7 +42,7 @@ class RhythmPattern {
         
         for (let i = 0; i < rpValue.length; i++) {
             out += rpValue[i];
-            if (i % rpGroupSize == rpGroupSize - 1 && i !== rpValue.length - 1) {
+            if (i % rpGroupSize == rpGroupSize - 1 && i !== rpValue.length - 1) {  // Seperate beats with comma
                 out += ","
             }
         }
@@ -86,4 +86,4 @@ class RhythmPattern {
 
 }
 
-module.exports = RhythmPattern;
+module.exports = RhythmSequence;

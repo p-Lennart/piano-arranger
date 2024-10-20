@@ -1,12 +1,39 @@
 const AccompRhythm = require("./AccompRhythm");
-const RhythmPattern = require("./rhythmPattern");
+const RhythmSequence = require("./RhythmSequence");
 
 class AccompContour {
 
-    constructor(value) { // Init from string representation
+    constructor(value, subdivision=4) { // Init from string representation
         this.value = value;
-        this.beatmap = {};
-        this.groupSize = 4; // Default value
+        this.subdivision = subdivision; // Default value
+    }
+
+    static fromAccompRhythm(accompRhythm, value) {
+        let downbeats = accompRhythm.getDownbeats();
+        let upbeats = accompRhythm.getDownbeats(); 
+
+        let resultValue = [];
+
+        let pos = 0;
+        for (let i = 0; i < accompRhythm.value.length; i++) {
+            if (downbeats.includes(i)) {
+                pos -= 1;
+                if (pos < 0) {
+                    pos = 0;
+                }
+
+                resultValue[i] = value[pos];
+            } else if (upbeats.includes(i)) {
+                pos += 1;
+                resultValue[i] = value[pos];
+            } else {
+                pos += 1;
+                resultValue[i] = value[pos];
+                // resultValue[i] = NaN;
+            }
+        }
+
+        return new AccompContour(resultValue, accompRhythm.subdivision);
     }
 
     toAccompRhythm() {
@@ -25,10 +52,6 @@ class AccompContour {
         return new AccompRhythm(rhythmString);
     }
 
-    // applyScale(scale) {
-    //     let 
-    // }
-
     static presets = {
         "straight": [
             1, 2, 3, 4,
@@ -36,17 +59,29 @@ class AccompContour {
             9, 10, 11, 12,
             13, 14, 15, 16,
         ],
-        "staggeredDB": [
+        "staggered4": [
             1, 2, 3, 4,
             2, 3, 4, 5,
             3, 4, 5, 6,
             4, 5, 6, 7,
         ],
-        "staggeredUB": [
+        "staggered5": [
             1, 2, 3, 4,
             5, 3, 4, 5,
             6, 4, 5, 6,
             7, 5, 6, 7,
+        ],
+        "unravelB": [
+            1, 4, 3, 4,
+            2, 3, 4, 5, 
+            6, 4, 3, 4,
+            2, 4, 3, 4,
+        ],
+        "unravelE": [
+            1, 4, 3, 4,
+            2, 6, 7, 8,
+            11, 10, 9, 10,
+            3, 8, 7, 8,
         ],
         "alberti": [
             1, 3, 2, 3,
