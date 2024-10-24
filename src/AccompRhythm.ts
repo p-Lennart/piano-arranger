@@ -1,3 +1,4 @@
+import MelodyRhythm from "MelodyRhythm";
 import RhythmSequence from "./RhythmSequence";
 
 export default class AccompRhythm extends RhythmSequence {
@@ -37,6 +38,39 @@ export default class AccompRhythm extends RhythmSequence {
         }
     
         return new AccompRhythm(data);
+    }
+
+    static syncopatedAccomp(mr: MelodyRhythm) {
+        let res = AccompRhythm.createEmpty(mr.value.length, mr.subdivision); // Empty init string of same groupings
+
+        res.setUpbeats(mr.getRests());     // Fill rests with upbeats
+        res.setUpbeats(mr.getWeakbeats()); // Fill rests with upbeats
+        res.setRests(mr.getStrongbeats()); // Rest on strong beats
+        res.setDownbeats([0]);               // Start with downbeat
+
+        return res;
+    }
+
+    static synchronizedAccomp(mr: MelodyRhythm) {
+        let res = AccompRhythm.createEmpty(mr.value.length, mr.subdivision); // Empty init string of same groupings
+
+        res.setRests(mr.getWeakbeats()); // Rest during weak beats
+        
+        for (let ind of mr.getStrongbeats()) { // Iterate backward through strong beats
+            
+            if (mr.checkSpace(ind - 2)) { // Two-subbeat leadup (downbeat-upbeat) to upbeat, if applicable
+                res.setDownbeats([ind - 2]);
+                res.setUpbeats([ind - 1]);
+            } else if (mr.checkSpace(ind - 1)) { // One-subbeat leadup (downbeat) to upbeat, if applicable
+                res.setDownbeats([ind - 1]);
+            }
+
+            res.setUpbeats([ind]); // Sync upbeat with strong beat in question
+        }
+    
+        res.setDownbeats([0]) // Start with downbeat
+
+        return res;
     }
 
     static presets = [
