@@ -1,34 +1,37 @@
-const AccompRhythm = require("./AccompRhythm");
-const RhythmSequence = require("./RhythmSequence");
+import AccompRhythm from "./AccompRhythm";
 
-class AccompContour {
+export default class AccompContour {
+    value: Array<number>;
+    subdivision: number;
 
-    constructor(value, subdivision=4) { // Init from string representation
+    constructor(value: Array<number>, subdivision=4) {
         this.value = value;
-        this.subdivision = subdivision; // Default value
+        this.subdivision = subdivision;
     }
 
-    static fromAccompRhythm(accompRhythm, value) {
+    static fromAccompRhythm(accompRhythm: AccompRhythm, sourceValue: Array<number>) {
         let downbeats = accompRhythm.getDownbeats();
         let upbeats = accompRhythm.getDownbeats(); 
 
-        let resultValue = [];
+        let resultValue = ([] as number[]);
 
         let pos = 0;
         for (let i = 0; i < accompRhythm.value.length; i++) {
+            let currentValue = (sourceValue[pos] as number)
+
             if (downbeats.includes(i)) {
                 pos -= 1;
                 if (pos < 0) {
                     pos = 0;
                 }
 
-                resultValue[i] = value[pos];
+                resultValue[i] = currentValue;
             } else if (upbeats.includes(i)) {
                 pos += 1;
-                resultValue[i] = value[pos];
+                resultValue[i] = currentValue;
             } else {
                 pos += 1;
-                resultValue[i] = value[pos];
+                resultValue[i] = currentValue;
                 // resultValue[i] = NaN;
             }
         }
@@ -41,8 +44,10 @@ class AccompContour {
         let lastValue = this.value[0];
 
         for (let i = 1; i < this.value.length; i++) {
-            lastValue = this.value[i - 1];
-            if (this.value[i] - lastValue > 0) {
+            let thisValue = (this.value[i] as number);
+            lastValue = (this.value[i - 1] as number);
+            
+            if (thisValue - lastValue > 0) {
                 rhythmString += "d";
             } else {
                 rhythmString += "u";
@@ -92,5 +97,3 @@ class AccompContour {
     }
     
 }
-
-module.exports = AccompContour;

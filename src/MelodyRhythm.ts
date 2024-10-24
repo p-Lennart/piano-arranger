@@ -1,9 +1,11 @@
-const AccompRhythm = require("./AccompRhythm");
-const RhythmSequence = require("./RhythmSequence");
+import RhythmSequence from "./RhythmSequence";
+import AccompRhythm from "./AccompRhythm";
 
-class MelodyRhythm extends RhythmSequence {
+export default class MelodyRhythm extends RhythmSequence {
+    strongbeats: Array<number>;
+    weakbeats: Array<number>;
 
-    constructor(valueStr) {
+    constructor(valueStr: string) {
         super(valueStr);
         this.strongbeats = this.getStrongbeats();
         this.weakbeats = this.getWeakbeats();
@@ -17,22 +19,34 @@ class MelodyRhythm extends RhythmSequence {
         return super.getBeats("w");
     }
 
-    setStrongbeats(indices) {
+    setStrongbeats(indices: Array<number>) {
         return super.setBeats("s", indices);
     }
 
-    setWeakbeats(indices) {
+    setWeakbeats(indices: Array<number>) {
         return super.setBeats("w", indices);
     }
+
+    static createEmpty(length: number, subdivision: number): MelodyRhythm {
+        let data = "";
+        
+        for (let i = 0; i < length; i++) {
+            data += "-";
+            if (i % subdivision === subdivision - 1 && i !== length - 1) {  // Seperate beats with comma
+                data += ","
+            }
+        }
+    
+        return new MelodyRhythm(data);
+    }
+
 
     static presets = [
         "s-ww,s-s-,s-ws,-s-w",
     ];
 
     syncopatedAccomp() {
-        let res = new AccompRhythm(
-            this.toString().replaceAll("w", "-").replaceAll("s", "-")
-        ); // Empty init string of same groupings
+        let res = AccompRhythm.createEmpty(this.value.length, this.subdivision); // Empty init string of same groupings
 
         res.setUpbeats(this.getRests());     // Fill rests with upbeats
         res.setUpbeats(this.getWeakbeats()); // Fill rests with upbeats
@@ -42,23 +56,21 @@ class MelodyRhythm extends RhythmSequence {
         return res;
     }
 
-    checkSpace(ind, includeWeak) {
-        if (ind === 0) {
+    checkSpace(index: number, includeWeak?: boolean) {
+        if (index === 0) {
             return false;
         }
         
         if (includeWeak) {
-            return !this.getStrongbeats().includes(ind) && !this.getWeakbeats().includes(ind);
+            return !this.getStrongbeats().includes(index) && !this.getWeakbeats().includes(index);
         } else {
-            return !this.getStrongbeats().includes(ind);
+            return !this.getStrongbeats().includes(index);
         }
         
     }
 
     synchronizedAccomp() {
-        let res = new AccompRhythm(
-            this.toString().replaceAll("w", "-").replaceAll("s", "-")
-        ); // Empty init string of same groupings
+        let res = AccompRhythm.createEmpty(this.value.length, this.subdivision); // Empty init string of same groupings
 
         res.setRests(this.getWeakbeats()); // Rest during weak beats
         
@@ -80,7 +92,5 @@ class MelodyRhythm extends RhythmSequence {
     }
 
 }
-
-module.exports = MelodyRhythm;
 
 

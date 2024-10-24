@@ -1,4 +1,4 @@
-const Note = require("./Note");
+import Note from "./Note";
 
 const minorTransposes = new Map([
     [4, 3],
@@ -6,7 +6,7 @@ const minorTransposes = new Map([
     [11, 10],
 ]);
 
-const spanSpacings = [
+const spanSpacings: [boolean, number][] = [
     [false, 0],  // Octave -1: no fifth, no "close notes"
     [false, 0],  // Octave 0: no fifth, no "close notes"
     [false, 0],  // Octave 1: no fifth, no "close notes"
@@ -20,9 +20,15 @@ const spanSpacings = [
     [true, 12],  // Octave 9: use fifth, twelve "close notes"
 ];
 
-class Scale {
+export default class Scale {
+    keyLabel: string;
+    minor: boolean;
+    basis: Array<number>;
+    rootNote: Note;
+    span: Array<Note>;
+    spacedSpan: Array<Note>;
 
-    constructor(keyLabel, basis) { // Init from string representation
+    constructor(keyLabel: string, basis: Array<number>) { // Init from string representation
         this.keyLabel = keyLabel;
         this.minor = keyLabel.endsWith("m");
 
@@ -53,8 +59,8 @@ class Scale {
         "blues": [0, 2, 3, 4, 7, 9],
     }
 
-    setBasis(basis) {
-        let result = [];
+    setBasis(basis: Array<number>) {
+        let result: Array<number> = [];
 
         // if (this.minor) {
         //     result = Array.from(minorTransposes.values());
@@ -64,7 +70,7 @@ class Scale {
             let normalized = component % 12;
 
             if (this.minor && minorTransposes.has(normalized)) {
-                normalized = minorTransposes.get(normalized);
+                normalized = (minorTransposes.get(normalized) as number);
             }
             
             if (!result.includes(normalized)) {
@@ -94,15 +100,15 @@ class Scale {
         let result = [];
 
         for (let oct = -1; oct <= 9; oct++) {
-            let octaveShift = (oct + 1) * 12;
+            let octaveShift = (oct + 1) * 12
+            
+            let [useFifth, closeNotes] = (spanSpacings[oct + 1] as [boolean, number]);
 
-            let [useFifth, closeNotes] = spanSpacings[oct + 1];
-
-            let thisNote = this.rootNote.transpose(this.basis[0] + octaveShift);
+            let thisNote = this.rootNote.transpose((this.basis[0] as number) + octaveShift);
             result.push(thisNote);
 
             for (let i = 1; i < this.basis.length; i++) {    
-                thisNote = this.rootNote.transpose(this.basis[i] + octaveShift);            
+                thisNote = this.rootNote.transpose((this.basis[i] as number) + octaveShift);            
                 
                 if (useFifth && this.basis[i] == 7) {
                     result.push(thisNote);
@@ -119,15 +125,15 @@ class Scale {
     getNoteLabels() {
         let sample = this.span.slice(0, this.basis.length);
         return sample.map(sampleNote => {
-            return sampleNote.getNoteLabel(this.keyLabel, this.minor);
+            return sampleNote.getNoteLabel(this.keyLabel);
         });
     }
 
-    nextNote(startNote) {
+    nextNote(startNote: Note) {
         return this.nextNoteByOffset(startNote, 1);
     }
     
-    nextNoteByOffset(startNote, offset) {
+    nextNoteByOffset(startNote: Note, offset: number) {
         let pos = this.span.findIndex(spanNote => spanNote.getValue() === startNote.getValue());
         if (pos === -1) {
             return null;
@@ -137,5 +143,3 @@ class Scale {
     }
 
 }
-
-module.exports = Scale;
