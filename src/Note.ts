@@ -8,7 +8,7 @@ const noteChars: [string, number][] = [
     ["B", 11],
 ];
 
-let accidentalPerKey = {
+const accidentalPerKey = {
     "C": "#",
     "Db": "b",
     "D": "#",

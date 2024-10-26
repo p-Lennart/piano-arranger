@@ -1,6 +1,19 @@
 import MelodyRhythm from "MelodyRhythm";
 import RhythmSequence from "./RhythmSequence";
 
+const presets = [
+    "d---,u-d-,--d-,u---",
+    "d---,d-u-,--d-,u---",
+    "d---,u-u-,d---,u-u-",
+    "d-u-,u-u-,u-u-,u-u-",
+    "du-u,-u-u,-u-u,-u-u",
+    "d---,--d-,u---,u---",
+    "d--d,--d-,u---,----",
+    "d--u,--u-,d--u,--u-",
+    "d--d,--d-,-d--,dudu",
+    "d---,u--d,--d-,u---",
+];
+
 export default class AccompRhythm extends RhythmSequence {
     downbeats: Array<number>;
     upbeats: Array<number>;
@@ -73,17 +86,15 @@ export default class AccompRhythm extends RhythmSequence {
         return res;
     }
 
-    static presets = [
-        "d---,u-d-,--d-,u---",
-        "d---,d-u-,--d-,u---",
-        "d---,u-u-,d---,u-u-",
-        "d-u-,u-u-,u-u-,u-u-",
-        "du-u,-u-u,-u-u,-u-u",
-        "d---,--d-,u---,u---",
-        "d--d,--d-,u---,----",
-        "d--u,--u-,d--u,--u-",
-        "d--d,--d-,-d--,dudu",
-        "d---,u--d,--d-,u---",
-    ];
+    static getPresets(filterFn?: (ar: AccompRhythm) => boolean): AccompRhythm[] {
+        let result = [];
+        for (let arStr of presets) {
+            let ar = new AccompRhythm(arStr);
+            if (filterFn !== undefined && filterFn(ar)) {
+                result.push(ar);
+            }
+        }
+        return result;
+    }
 
 }
