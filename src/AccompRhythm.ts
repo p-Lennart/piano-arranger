@@ -1,5 +1,5 @@
+import RhythmicSequence, { SequenceItem, SequenceReference } from "abstract/RhythmicSequence";
 import MelodyRhythm from "MelodyRhythm";
-import RhythmSequence from "./RhythmSequence";
 
 const presets = [
     "d---,u-d-,--d-,u---",
@@ -14,86 +14,136 @@ const presets = [
     "d---,u--d,--d-,u---",
 ];
 
-export default class AccompRhythm extends RhythmSequence {
-    downbeats: Array<number>;
-    upbeats: Array<number>;
+class AccRhySeqItem implements SequenceItem {
+    label: string;
 
     constructor(data: string) {
-        super(data);
-        this.downbeats = (this.getDownbeats() as number[]);
-        this.upbeats = (this.getUpbeats() as number[]);
+        this.label = data;
+    } 
+
+    toString(): string {
+        return this.label;
+    }
+}
+
+export default class AccompRhythm extends RhythmicSequence<AccRhySeqItem> {
+    static REST_LABEL = "-";
+    static SUBDIV_LABEL = ",";
+    static DOWN_BEAT = new AccRhySeqItem("d");
+    static UP_BEAT = new AccRhySeqItem("u");
+
+    setDownbeat(ref: SequenceReference) {
+        return super.setItem(ref, AccompRhythm.DOWN_BEAT);
     }
 
+    setUpbeat(ref: SequenceReference) {
+        return super.setItem(ref, AccompRhythm.UP_BEAT);
+    }
+    
     getDownbeats() {
-        return super.getBeats("d");
+        return super.bulkGet(AccompRhythm.DOWN_BEAT);
     }
 
     getUpbeats() {
-        return super.getBeats("u");
+        return super.bulkGet(AccompRhythm.UP_BEAT);
     }
 
-    setDownbeats(indices: Array<number>) {
-        return super.setBeats("d", indices);
+    setDownbeats(refs: SequenceReference[]) {
+        return super.bulkSet(AccompRhythm.DOWN_BEAT, refs);
     }
 
-    setUpbeats(indices: Array<number>) {
-        return super.setBeats("u", indices);
+    setUpbeats(refs: SequenceReference[]) {
+        return super.bulkSet(AccompRhythm.UP_BEAT, refs);
     }
 
-    static createEmpty(length: number, subdivision: number): AccompRhythm {
-        let data = "";
-        
-        for (let i = 0; i < length; i++) {
-            data += "-";
-            if (i % subdivision === subdivision - 1 && i !== length - 1) {  // Seperate beats with comma
-                data += ","
+    static createEmpty(subdivisions: number[], subdurations?: number[]): AccompRhythm {
+        let items = [];
+        let index = 0;
+
+        for (let sd of subdivisions) {
+            for (let i = 0; i < sd; i++) {
+                items[index] = null;
+                index += 1;
             }
         }
-    
-        return new AccompRhythm(data);
+
+        return new AccompRhythm(items, subdivisions, subdurations);
     }
 
     static syncopatedAccomp(mr: MelodyRhythm) {
-        let res = AccompRhythm.createEmpty(mr.value.length, mr.subdivision); // Empty init string of same groupings
+        let res = AccompRhythm.createEmpty(mr.subdivisions, mr.subdurations);  // Empty init string of same groupings
 
         res.setUpbeats(mr.getRests());     // Fill rests with upbeats
         res.setUpbeats(mr.getWeakbeats()); // Fill rests with upbeats
         res.setRests(mr.getStrongbeats()); // Rest on strong beats
-        res.setDownbeats([0]);               // Start with downbeat
+        res.setItem({ out: 0, inn: 0 }, AccompRhythm.DOWN_BEAT); // Start with downbeat
 
         return res;
     }
 
     static synchronizedAccomp(mr: MelodyRhythm) {
-        let res = AccompRhythm.createEmpty(mr.value.length, mr.subdivision); // Empty init string of same groupings
-
-        res.setRests(mr.getWeakbeats()); // Rest during weak beats
+        let res = AccompRhythm.createEmpty(mr.subdivisions, mr.subdurations);  // Empty init string of same groupings
         
-        for (let ind of mr.getStrongbeats()) { // Iterate backward through strong beats
-            
-            if (mr.checkSpace(ind - 2)) { // Two-subbeat leadup (downbeat-upbeat) to upbeat, if applicable
-                res.setDownbeats([ind - 2]);
-                res.setUpbeats([ind - 1]);
-            } else if (mr.checkSpace(ind - 1)) { // One-subbeat leadup (downbeat) to upbeat, if applicable
-                res.setDownbeats([ind - 1]);
+        // res.setRests(mr.getWeakbeats()); // Rest during weak beats
+        
+        for (let ref of mr.getStrongbeats()) { // Iterate backward through strong beats
+            if (mr.checkSpace(ref, -2, [MelodyRhythm.STRONG_BEAT])) { // Two-subbeat leadup (downbeat-upbeat) to upbeat, if applicable
+                res.setDownbeat(mr.incRef(ref, -2))
+                res.setUpbeat(mr.incRef(ref, -1))
+            } else if (mr.checkSpace(ref, -1), [MelodyRhythm.STRONG_BEAT]) { // One-subbeat leadup (downbeat) to upbeat, if applicable
+                res.setDownbeat(mr.incRef(ref, -1))
             }
 
-            res.setUpbeats([ind]); // Sync upbeat with strong beat in question
+            res.setUpbeat(ref); // Sync upbeat with strong beat in question
         }
     
-        res.setDownbeats([0]) // Start with downbeat
+        res.setDownbeat({ out: 0, inn: 0 }); // Start with downbeat
 
         return res;
+    }
+
+    static fromString(data: string) {
+        let items = [];
+        let subdivisions = [];
+        
+        let subInd = 0;
+        let subDiv = 0;
+        
+        for (let c of data) {
+            switch (c) {
+                case this.DOWN_BEAT.toString(): 
+                    items.push(this.DOWN_BEAT);
+                    subDiv += 1;
+                    break;
+                case this.UP_BEAT.toString():
+                    items.push(this.UP_BEAT);
+                    subDiv += 1;
+                    break;
+                case this.REST_LABEL:
+                    items.push(null);
+                    subDiv += 1;
+                    break;
+                case this.SUBDIV_LABEL:
+                    subdivisions[subInd] = subDiv;
+                    subInd += 1;
+                    subDiv = 0;
+            }
+        }
+        
+        subdivisions[subInd] = subDiv;
+
+        return new AccompRhythm(items, subdivisions);
     }
 
     static getPresets(filterFn?: (ar: AccompRhythm) => boolean): AccompRhythm[] {
         let result = [];
         for (let arStr of presets) {
-            let ar = new AccompRhythm(arStr);
+            let ar = AccompRhythm.fromString(arStr);
             if (filterFn !== undefined && filterFn(ar)) {
                 result.push(ar);
             }
         }
+
         return result;
     }
 

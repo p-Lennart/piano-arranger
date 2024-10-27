@@ -1,35 +1,15 @@
+import AccompRhythm from "AccompRhythm";
 import MelodyRhythm from "./MelodyRhythm";
 import Note from "./Note";
 import Scale from "./Scale";
 
-// let n = new Note(94);
-// console.log("Note object with value 95, using Db scale:", n.toString("Db"));
-// console.log("Note object with value 95, using F# scale:", n.toString("F#"));
-
-// let m = new Note("C-1");
-// console.log("Note object instantiated with string, value:", m.value);
-
-
-// let s = new Scale("F#m", Scale.bases.major);
-// console.log(s.getNoteLabels());
-
-// let n = s.span[39];
-// console.log(n.toString());
-// console.log(s.nextNote(n).toString());
-
-// let ap = new AccompContour(AccompContour.presets.alberti);
-// let aprp = ap.toAccompRhythm();
-// console.log(aprp);
-
-
-
-const demoMelody = new MelodyRhythm("s-ww,s-s-,s-ws,-s-w");
+const demoMelody = MelodyRhythm.fromString("s-ww,s-s-,s-ws,-s-w");
 console.log("Demo melody:                ", demoMelody.toString());
 
-const syncAccomp = demoMelody.syncopatedAccomp();
+const syncAccomp = AccompRhythm.syncopatedAccomp(demoMelody);
 console.log("Syncopated Accompaniment:   ", syncAccomp.toString());
 
-const synchrAccomp = demoMelody.synchronizedAccomp();
+const synchrAccomp = AccompRhythm.synchronizedAccomp(demoMelody);
 console.log("Synchronized Accompaniment: ", synchrAccomp.toString());
 
 // const synchrContour = AccompContour.fromAccompRhythm(synchrAccomp, AccompContour.presets.straightUp);

@@ -77,10 +77,10 @@ export default class Note {
         this.value = noteValue;
     }
 
-    toString(keyLabel?: string) {
+    toString(keyLabel?: string): string {
         let noteLabel = this.getNoteLabel(keyLabel);
         if (!noteLabel) {
-            return null;
+            throw new Error("Failed to generate note label for Note");
         }
         return noteLabel + this.getOctave();
     }

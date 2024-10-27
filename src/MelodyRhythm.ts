@@ -1,61 +1,115 @@
-import RhythmSequence from "./RhythmSequence";
+import RhythmicSequence, { SequenceItem, SequenceReference } from "abstract/RhythmicSequence";
+import NoteSequence from "NoteSqeuence";
 
-export default class MelodyRhythm extends RhythmSequence {
-    strongbeats: Array<number>;
-    weakbeats: Array<number>;
+const presets = [
+    "s-ww,s-s-,s-ws,-s-w",
+];
 
-    constructor(valueStr: string) {
-        super(valueStr);
-        this.strongbeats = this.getStrongbeats();
-        this.weakbeats = this.getWeakbeats();
+
+class MelRhySeqItem implements SequenceItem {
+    label: string;
+
+    constructor(data: string) {
+        this.label = data;
+    } 
+
+    toString(): string {
+        return this.label;
+    }
+}
+
+export default class MelodyRhythm extends RhythmicSequence<MelRhySeqItem> {
+    static REST_LABEL = "-";
+    static SUBDIV_LABEL = ",";
+    static STRONG_BEAT = new MelRhySeqItem("s");
+    static WEAK_BEAT = new MelRhySeqItem("w");
+
+    setStrongbeat(ref: SequenceReference) {
+        return super.setItem(ref, MelodyRhythm.STRONG_BEAT);
+    }
+
+    setWeakbeat(ref: SequenceReference) {
+        return super.setItem(ref, MelodyRhythm.WEAK_BEAT);
     }
     
     getStrongbeats() {
-        return super.getBeats("s");
+        return super.bulkGet(MelodyRhythm.STRONG_BEAT);
     }
 
     getWeakbeats() {
-        return super.getBeats("w");
+        return super.bulkGet(MelodyRhythm.WEAK_BEAT);
     }
 
-    setStrongbeats(indices: Array<number>) {
-        return super.setBeats("s", indices);
+    setStrongbeats(refs: SequenceReference[]) {
+        return super.bulkSet(MelodyRhythm.STRONG_BEAT, refs);
     }
 
-    setWeakbeats(indices: Array<number>) {
-        return super.setBeats("w", indices);
+    setWeakbeats(refs: SequenceReference[]) {
+        return super.bulkSet(MelodyRhythm.WEAK_BEAT, refs);
     }
-    
-    checkSpace(index: number, includeWeak?: boolean) {
-        if (index === 0) {
-            return false;
+
+    static createEmpty(subdivisions: number[], subdurations: number[]): MelodyRhythm {
+        let items = [] as null[];
+        for (let sd of subdivisions) {
+            items.concat(Array(sd).fill(null));
         }
-        
-        if (includeWeak) {
-            return !this.getStrongbeats().includes(index) && !this.getWeakbeats().includes(index);
-        } else {
-            return !this.getStrongbeats().includes(index);
-        }
-        
+
+        return new MelodyRhythm(items, subdivisions, subdurations);
     }
 
-    static createEmpty(length: number, subdivision: number): MelodyRhythm {
-        let data = "";
+    static fromString(data: string) {
+        let items = [];
+        let subdivisions = [];
+        let subdurations = [];
         
-        for (let i = 0; i < length; i++) {
-            data += "-";
-            if (i % subdivision === subdivision - 1 && i !== length - 1) {  // Seperate beats with comma
-                data += ","
+        let subInd = 0;
+        let subDiv = 0;
+        
+        for (let c of data) {
+            switch (c) {
+                case this.STRONG_BEAT.toString(): 
+                    items.push(this.STRONG_BEAT);
+                    subDiv += 1;
+                    break;
+                case this.WEAK_BEAT.toString():
+                    items.push(this.WEAK_BEAT);
+                    subDiv += 1;
+                    break;
+                case this.REST_LABEL:
+                    items.push(null);
+                    subDiv += 1;
+                    break;
+                case this.SUBDIV_LABEL:
+                    subdivisions[subInd] = subDiv;
+                    subInd += 1;
+                    subDiv = 0;
             }
         }
-    
-        return new MelodyRhythm(data);
+        
+        subdivisions[subInd] = subDiv;
+        subdurations = subdivisions.map(n => { return n / items.length });
+
+        return new MelodyRhythm(items, subdivisions, subdurations);
     }
 
-    static presets = [
-        "s-ww,s-s-,s-ws,-s-w",
-    ];
+    static getPresets(filterFn?: (mr: MelodyRhythm) => boolean): MelodyRhythm[] {
+        let result = [];
+        for (let arStr of presets) {
+            let ar = MelodyRhythm.fromString(arStr);
+            if (filterFn !== undefined && filterFn(ar)) {
+                result.push(ar);
+            }
+        }
+        
+        return result;
+    }
 
+    // static parseMelody(melody: NoteSequence): MelodyRhythm[] {
+    //     let result = [] as MelodyRhythm[];
+    //     for (let i = 0; i < melody.contents.length; i++) {
+    //         result[i] = MelodyRhythm.createEmpty(melody.contents[i].length, melody.subdivisions[i])
+    //     }
+    // }
 
 }
 

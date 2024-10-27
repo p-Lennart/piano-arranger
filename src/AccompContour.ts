@@ -1,3 +1,4 @@
+import RhythmicSequence, { SequenceItem, SequenceReference } from "abstract/RhythmicSequence";
 import AccompRhythm from "./AccompRhythm";
 
 const presets = {
@@ -39,17 +40,14 @@ const presets = {
     ],
 }
 
-export default class AccompContour {
-    value: Array<number>;
-    subdivision: number;
+export default class AccompContour extends RhythmicSequence<number> {
     range: number;
 
-    constructor(value: Array<number>, subdivision=4) {
-        this.value = value;
-        this.subdivision = subdivision;
+    constructor(items: number[], subdivisions: number[], subdurations?: number[]) {
+        super(items, subdivisions, subdurations);
         
         let max = 0;
-        for (let offset of value) {
+        for (let offset of items) {
             if (offset > max) {
                 max = offset;
             }
@@ -58,65 +56,60 @@ export default class AccompContour {
         this.range = max;
     }
 
-    get(ind: number): number {
-        if (this.value[ind] === undefined) {
-            throw new Error("Requested index beyond bounds of AccompContour");
-        }
-        return this.value[ind];
-    }
+    static fromAccompRhythm(ar: AccompRhythm, source: AccompContour) {
+        let resultItems = [];
 
-    static fromAccompRhythm(accompRhythm: AccompRhythm, source: AccompContour) {
-        let downbeats = accompRhythm.getDownbeats();
-        let upbeats = accompRhythm.getDownbeats(); 
-
-        let resultValue = ([] as number[]);
-
+        let arSpread = ar.spreadContents();
+        let sourceSpread = source.spreadContents();
         let pos = 0;
-        for (let i = 0; i < accompRhythm.value.length; i++) {
-            let currentValue = (source.value[pos] as number)
-
-            if (downbeats.includes(i)) {
+        
+        for (let a of arSpread) {
+            let currentValue = sourceSpread[pos] as number;
+            
+            if (a?.toString() === AccompRhythm.DOWN_BEAT.toString()) {
                 pos -= 1;
                 if (pos < 0) {
                     pos = 0;
                 }
 
-                resultValue[i] = currentValue;
-            } else if (upbeats.includes(i)) {
+                resultItems.push(currentValue);
+            } else if (a?.toString() === AccompRhythm.UP_BEAT.toString()) {
                 pos += 1;
-                resultValue[i] = currentValue;
+                resultItems.push(currentValue);
             } else {
                 pos += 1;
-                resultValue[i] = currentValue;
+                resultItems.push(currentValue);
                 // resultValue[i] = NaN;
             }
         }
 
-        return new AccompContour(resultValue, accompRhythm.subdivision);
+        return new AccompContour(resultItems, ar.subdivisions);
     }
 
     toAccompRhythm() {
-        let rhythmString = "d";
-        let lastValue = this.value[0];
+        let resultItems = [AccompRhythm.DOWN_BEAT];
+        let contentSpread = this.spreadContents();
 
-        for (let i = 1; i < this.value.length; i++) {
-            let thisValue = (this.value[i] as number);
-            lastValue = (this.value[i - 1] as number);
+        let lastValue = contentSpread[0];
+
+        for (let i = 1; i < contentSpread.length; i++) {
+            let thisValue = contentSpread[i] as number;
+            lastValue = contentSpread[i - 1] as number;
             
             if (thisValue - lastValue > 0) {
-                rhythmString += "d";
+                resultItems.push(AccompRhythm.DOWN_BEAT);
             } else {
-                rhythmString += "u";
+                resultItems.push(AccompRhythm.UP_BEAT);
             } 
         }
 
-        return new AccompRhythm(rhythmString);
+        return new AccompRhythm(resultItems, this.subdivisions);
     }
     
     static getPresets(filterFn?: (ar: AccompContour) => boolean): AccompContour[] {
         let result = [];
         for (let value of Object.values(presets)) {
-            let ar = new AccompContour(value, 4);
+            let ar = new AccompContour(value, [4, 4, 4, 4]);
             if (filterFn !== undefined && filterFn(ar)) {
                 result.push(ar);
             }
