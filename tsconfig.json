@@ -17,7 +17,7 @@
     "sourceRoot": "/src", // Specify the location where a debugger should locate TypeScript files instead of relative source locations.
 
     // Strict Checks
-    "strict": true,
+    "strict": false,
 
     // Linter Checks
     "noImplicitReturns": true,

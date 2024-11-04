@@ -73,6 +73,14 @@ export default abstract class RhythmicSequence<T extends SequenceItem> {
         }
     }
 
+    append(content: T[], subdivision, subduration) {
+        this.contents.push(content);
+        this.subdivisions.push(subdivision);
+        this.subdurations.push(subduration);
+
+        this.writeContentsAndMap();
+    } 
+
     getRests(): SequenceReference[] {
         return this.bulkGet(null);
     }
