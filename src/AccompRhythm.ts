@@ -56,7 +56,7 @@ export default class AccompRhythm extends RhythmicSequence<AccRhySeqItem> {
         return super.bulkSet(AccompRhythm.UP_BEAT, refs);
     }
 
-    static createEmpty(subdivisions: number[], subdurations?: number[]): AccompRhythm {
+    static createEmpty(subdivisions: number[], subdurations?: any[]): AccompRhythm {
         let items = [];
         let index = 0;
 

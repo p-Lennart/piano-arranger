@@ -94,6 +94,10 @@ export default class Note {
     compare(note: Note) {
         return this.value - note.value;
     }
+
+    equals(note: Note) {
+        return this.compare(note) === 0;
+    }
     
     setPreferredKeyLabel(keyLabel: string) {
         this.preferredKeyLabel = keyLabel;

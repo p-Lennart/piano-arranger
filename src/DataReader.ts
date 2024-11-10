@@ -2,34 +2,7 @@ import MidiParser from 'midi-parser-js';
 import fs from "fs";
 import Note from 'Note';
 import NoteSequence from 'NoteSqeuence';
-import { findSourceMap } from 'module';
-
-const gcd = function(a, b) {
-    if (!b) {
-      return a;
-    }
-  
-    return gcd(b, a % b);
-}
-
-const findSubDivisor = function(durations: number[]): number {
-    durations = durations.sort((a, b) => a - b);
-
-    let divisor = durations[0];
-    let passed = true;
-
-    while (passed) {
-        for (let d of durations) {
-            if (d % divisor !== 0) {
-                passed = false;
-                divisor = gcd(d, divisor);
-                break;
-            }
-        }
-    }
-
-    return divisor;
-}
+import Fraction from 'common/Fraction';
 
 interface midiTimings {
     timeSignature: [number, number],
@@ -40,7 +13,9 @@ interface midiTimings {
 
 interface bufferEntry {
     note: Note,
+    tick: number,
     duration: number | null,
+    timeToNext: number | null,
 }
 
 export default class DataReader {
@@ -55,68 +30,99 @@ export default class DataReader {
         fs.writeFileSync(`test${filepath}.json`, JSON.stringify(this.midiArray, null, 4)); 
 
         let m = this.midiArray; 
-        this.midiTimings = DataReader.calculateMidiTimings(m, m.timeDivision);
-        
         let tt = m.track[0];
+
+        let meta88 = tt.event.find(e => e.metaType === 88);
+        if (!meta88) {
+            throw new Error("MIDI track missing meta 88 event");
+        }
+
+        this.midiTimings = DataReader.calculateMidiTimings(meta88, m.timeDivision);
         
-        let playheadTick = 0;
-        let measures = [];
-        
-        let measureBuffer = {} as Record<number, bufferEntry>;
+        let measureTick = 0;
+    
+        let measures = [];    
+        let measureBuffer = [] as bufferEntry[];
 
         for (let event of tt.event) {
             let dt = event.deltaTime;
-            playheadTick += dt;
+            measureTick += dt;
 
-            if (playheadTick >= this.midiTimings.ticksPerMeasure) {
+            if (measureTick >= this.midiTimings.ticksPerMeasure) {
+                let lastInd = measureBuffer.length - 1;
+                measureBuffer[lastInd].timeToNext = this.midiTimings.ticksPerMeasure - measureBuffer[lastInd].tick;
+
                 let ns = this.createBestNoteSequence(measureBuffer);
                 
                 measures.push(ns);
-                                
-                measureBuffer = {};
-                playheadTick = playheadTick - this.midiTimings.ticksPerMeasure;
+                measureBuffer = [];
+                measureTick = measureTick - this.midiTimings.ticksPerMeasure;
             }
 
             if (event.type === 9) {
-                let ed = event.data;
-                let note = new Note(ed[0]);
-                let velocity = ed[1];
+                let note = new Note(event.data[0]);
+                let velocity = event.data[1];
 
                 if (velocity !== 0) {
-                    measureBuffer[playheadTick] = { note: note, duration: null };
+                    let lastInd = measureBuffer.length - 1;
+                    if (lastInd >= 0) {
+                        measureBuffer[lastInd].timeToNext = measureTick - measureBuffer[lastInd].tick;
+                    } 
+                    
+                    measureBuffer.push({ note: note, tick: measureTick, duration: null, timeToNext: null });
                 } else {
-                    measureBuffer[playheadTick - dt].duration = dt;
+                    // let noteOnInd = measureBuffer.findLastIndex(be => be.tick === measureTick - dt);  // Old way of finding note-on
+                    let noteOnInd = measureBuffer.findLastIndex(be => be.note.equals(note));
+                    measureBuffer[noteOnInd].duration = measureTick - measureBuffer[noteOnInd].tick;
                 }
             }
         }
+        
+        let lastInd = measureBuffer.length - 1;
+        measureBuffer[lastInd].timeToNext = this.midiTimings.ticksPerMeasure - measureBuffer[lastInd].tick;
 
-        console.log(measures);
+        let ns = this.createBestNoteSequence(measureBuffer);       
+        measures.push(ns);
+        
+
+        console.dir(measures, { depth: null })
+        // console.log(measures);
     }
 
     createBestNoteSequence(measureBuffer: Record<number, bufferEntry>): NoteSequence {
         let result = new NoteSequence([], [], []);
-
-        // WIP: algorithm to distinguish rhythms
-
-        // let startChunk = this.midiTimings.ticksPerMeasure * 4;
         
-        // let durations = Object.values(measureBuffer).map(a => a.duration);
-        // let bruteForce = findSubDivisor(durations);
+        let measureValues = Object.values(measureBuffer);
 
-        // let bruteDivisions = startChunk / bruteForce;
+        let sameLenNotes = [];
 
-        // let testChunk = startChunk / 2;
+        for (let i = 0; i < measureValues.length ; i++) {
 
-
-        // for (let i = 0; i < 9; i++) {  // Go up to 128th division
+            let thisProportion = measureValues[i].timeToNext / this.midiTimings.ticksPerMeasure;
             
-        // } 
+            let nextProportion: number = -1;
+            if (i < measureValues.length - 1) {
+                nextProportion = measureValues[i + 1].timeToNext / this.midiTimings.ticksPerMeasure;
+            }
+
+            sameLenNotes.push(measureValues[i].note);
+
+            if (nextProportion !== thisProportion) {
+                let n = sameLenNotes.length;
+                let subduration = new Fraction(measureValues[i].timeToNext * n,
+                    this.midiTimings.ticksPerMeasure);
+                result.append(sameLenNotes, n, subduration.simplify());
+
+                sameLenNotes = [];
+            }
+
+        }
 
         return result;
     }
 
-    static calculateMidiTimings(midiEventArray, timeDivision: number): midiTimings {
-        let data = midiEventArray.data;
+    static calculateMidiTimings(meta88obj, timeDivision: number): midiTimings {
+        let data = meta88obj.data;
 
         let tSig = [ data[0], 2 ** data[1] ] as [number, number];
 
@@ -131,4 +137,9 @@ export default class DataReader {
             ticksPerMeasure: tpMes,
         };
     }
+
+    // TODO: parse key signature, update "current key signature" as progressing through events
+    // static calculateMidiKeySignature(meta89obj) {
+        
+    // }
 }

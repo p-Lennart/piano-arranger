@@ -10,7 +10,7 @@ export interface SequenceReference {
 export default abstract class RhythmicSequence<T extends SequenceItem> {
     contents: (T | null)[][];
     subdivisions: number[];
-    subdurations: number[];
+    subdurations: (number | Fraction)[];
     contentMap: Record<string, SequenceReference[]>;
 
     static REST_LABEL = "-";
