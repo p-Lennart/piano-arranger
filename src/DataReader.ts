@@ -4,6 +4,8 @@ import Note from 'Note';
 import NoteSequence from 'NoteSqeuence';
 import Fraction from 'common/Fraction';
 
+const DURATION_TOLERANCE = 0.000525;
+
 interface midiTimings {
     timeSignature: [number, number],
     ticksPerQuarter: number,
@@ -94,25 +96,27 @@ export default class DataReader {
         
         let measureValues = Object.values(measureBuffer);
 
-        let sameLenNotes = [];
+        let sameLenNotes: Note[] = [];
+        let sameLensDuration = 0;
 
         for (let i = 0; i < measureValues.length ; i++) {
+            sameLenNotes.push(measureValues[i].note);
+            sameLensDuration += measureValues[i].timeToNext;
 
             let thisProportion = measureValues[i].timeToNext / this.midiTimings.ticksPerMeasure;
-            
-            let nextProportion: number = -1;
+            let nextProportion = -1;
+
             if (i < measureValues.length - 1) {
                 nextProportion = measureValues[i + 1].timeToNext / this.midiTimings.ticksPerMeasure;
             }
+        
+            let deviation = Math.abs(nextProportion - thisProportion);
 
-            sameLenNotes.push(measureValues[i].note);
+            if (deviation > DURATION_TOLERANCE) {  // If durations are close enough, count them as the same duration
+                let subduration = new Fraction(sameLensDuration,
+                    this.midiTimings.ticksPerMeasure).simplify();
 
-            if (nextProportion !== thisProportion) {
-                let n = sameLenNotes.length;
-                let subduration = new Fraction(measureValues[i].timeToNext * n,
-                    this.midiTimings.ticksPerMeasure);
-                result.append(sameLenNotes, n, subduration.simplify());
-
+                result.append(sameLenNotes, sameLenNotes.length, subduration);
                 sameLenNotes = [];
             }
 
