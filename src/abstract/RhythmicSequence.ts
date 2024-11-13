@@ -1,3 +1,5 @@
+import Fraction from "common/Fraction";
+
 export interface SequenceItem {
     toString(): string,
 }
@@ -16,10 +18,10 @@ export default abstract class RhythmicSequence<T extends SequenceItem> {
     static REST_LABEL = "-";
     static SUBDIV_LABEL = ",";
 
-    constructor(items: (T | null)[], subdivisions: number[], subdurations?: number[]) {
+    constructor(itemSpread: (T | null)[], subdivisions: number[], subdurations?: (number | Fraction)[]) {
         this.subdivisions = subdivisions;
         if (subdurations === undefined) {
-            this.subdurations = subdivisions.map(n => { return n / items.length });
+            this.subdurations = subdivisions.map(n => { return n / itemSpread.length });
         } else {
             this.subdurations = subdurations;
         }
@@ -27,7 +29,7 @@ export default abstract class RhythmicSequence<T extends SequenceItem> {
         this.contents = [];
         this.contentMap = {};
 
-        this.writeContentsAndMap(items);
+        this.writeContentsAndMap(itemSpread);
 
     }
 
@@ -67,9 +69,9 @@ export default abstract class RhythmicSequence<T extends SequenceItem> {
         return result as SequenceReference[];
     }
 
-    bulkSet(item: (T | null), refs: SequenceReference[]) {
+    bulkSet(itemSpread: (T | null), refs: SequenceReference[]) {
         for (let r of refs) {
-            this.setItem(r, item);
+            this.setItem(r, itemSpread);
         }
     }
 
