@@ -1,4 +1,5 @@
 import RhythmicSequence, { SequenceItem, SequenceReference } from "abstract/RhythmicSequence";
+import Fraction from "common/Fraction";
 import NoteSequence from "NoteSqeuence";
 
 const presets = [
@@ -48,7 +49,7 @@ export default class MelodyRhythm extends RhythmicSequence<MelRhySeqItem> {
         return super.bulkSet(MelodyRhythm.WEAK_BEAT, refs);
     }
 
-    static createEmpty(subdivisions: number[], subdurations: number[]): MelodyRhythm {
+    static createEmpty(subdivisions: number[], subdurations: Fraction[]): MelodyRhythm {
         let items = [] as null[];
         for (let sd of subdivisions) {
             items.concat(Array(sd).fill(null));
