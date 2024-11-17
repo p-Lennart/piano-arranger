@@ -2,7 +2,7 @@ import RhythmicSequence from "abstract/RhythmicSequence";
 import NoteSequence from "NoteSqeuence";
 import Note from "./Note";
 
-export default class ChordSequence extends RhythmicSequence<Note[]> {
+export default class ChordSequence extends RhythmicSequence<(Note | null)[]> {
 
     static fromNoteSequence(noteSequence: NoteSequence): ChordSequence {
         const spread = noteSequence.spreadContents();
@@ -10,5 +10,5 @@ export default class ChordSequence extends RhythmicSequence<Note[]> {
 
         return new ChordSequence(newSpread, noteSequence.subdivisions, noteSequence.subdurations);
     }
-    
+
 }

@@ -1,149 +1,175 @@
-import MidiParser from 'midi-parser-js';
+import * as MidiFile from 'midi-file';
 import fs from "fs";
 import Note from 'Note';
 import NoteSequence from 'NoteSqeuence';
 import Fraction from 'common/Fraction';
+import ChordSequence from 'ChordSequence';
 
-const DURATION_TOLERANCE = 0.000525;
-
-interface midiTimings {
-    timeSignature: [number, number],
-    ticksPerQuarter: number,
-    ticksPerBeat: number,
-    ticksPerMeasure: number,
-}
-
-interface bufferEntry {
-    note: Note,
+interface measureBufferEntry extends tickedEvent<Note | null> {
     tick: number,
+    data: Note | null,
     duration: number | null,
     timeToNext: number | null,
 }
 
+export const DURATION_TOLERANCE = 0.000525;
+export const DEFAULT_TIME_SIG: MidiFile.MidiTimeSignatureEvent = {
+    "deltaTime": 0,
+    "type": "timeSignature",
+    "numerator": 4,
+    "denominator": 4,
+    "metronome": 24,
+    "thirtyseconds": 8
+};
+
+export interface tickedEvent<T> {
+    tick: number,
+    data: T,
+}
+
+// export interface timeSignature {
+//     "numerator": number,
+//     "denominator": number,
+//     "metronome": number,
+//     "thirtyseconds": number,
+// }
+
+function createBestNoteSequence(measureBuffer: measureBufferEntry[], tpm: number): NoteSequence {
+    let result = new NoteSequence([], [], []);
+    
+    let sameLenNotes: Note[] = [];
+    let sameLensDuration = 0;
+
+    if (measureBuffer.length === 0 || measureBuffer[0].tick !== 0) {  // If measure doesn't start with a beat 
+        let timeToNext = tpm;
+        if (measureBuffer[0]) {
+            timeToNext = measureBuffer[0].tick;
+        }
+        
+        // Add null spacer to keep things aligned
+        measureBuffer.unshift({
+            tick: 0,
+            data: null,
+            duration: timeToNext,
+            timeToNext: timeToNext,
+        });
+    }
+
+    for (let i = 0; i < measureBuffer.length ; i++) {
+        sameLenNotes.push(measureBuffer[i].data);
+        sameLensDuration += measureBuffer[i].timeToNext;
+
+        let thisProportion = measureBuffer[i].timeToNext / tpm;
+        let nextProportion = -1;
+
+        if (i < measureBuffer.length - 1) {
+            nextProportion = measureBuffer[i + 1].timeToNext / tpm;
+        }
+    
+        let deviation = Math.abs(nextProportion - thisProportion);
+
+        if (deviation > DURATION_TOLERANCE) {  // If durations are close enough, count them as the same duration
+            let subduration = new Fraction(sameLensDuration,tpm).simplify();
+
+            result.append(sameLenNotes, sameLenNotes.length, subduration);
+
+            sameLenNotes = [];
+            sameLensDuration = 0;
+        }
+
+    }
+
+    return result;
+}
+
 export default class DataReader {
-    midiArray: any;
-    midiTimings: midiTimings;
+    data: MidiFile.MidiData;
+    header: MidiFile.MidiHeader;
+    timeSigs: tickedEvent<MidiFile.MidiTimeSignatureEvent>[];
+    measures: NoteSequence[];
 
     constructor(filepath: string) {
-        // read a .mid binary (as base64)
-        let data = fs.readFileSync(filepath, 'base64');
-        this.midiArray = MidiParser.parse(data);
-        
-        fs.writeFileSync(`test${filepath}.json`, JSON.stringify(this.midiArray, null, 4)); 
+        this.data = this.readData(filepath);
 
-        let m = this.midiArray; 
-        let tt = m.track[0];
+        this.header = this.data.header;
+        this.timeSigs = [];
+        this.measures = this.parseTrack(this.data.tracks[0]);
+    }
 
-        let meta88 = tt.event.find(e => e.metaType === 88);
-        if (!meta88) {
-            throw new Error("MIDI track missing meta 88 event");
+    readData(filepath: string) {
+        if (!filepath.endsWith('.mid') && !filepath.endsWith('.midi')) {
+            throw new Error(`Filepath ${filepath} is not a MIDI file!`);
         }
 
-        this.midiTimings = DataReader.calculateMidiTimings(meta88, m.timeDivision);
-        
-        let measureTick = 0;
-    
+        let raw = fs.readFileSync(filepath);
+        let data = MidiFile.parseMidi(raw);
+
+        // fs.writeFileSync(`read_${filepath}.json`, JSON.stringify(data, null, 4));
+        return data;
+    }
+
+    parseTrack(track: MidiFile.MidiEvent[]): NoteSequence[] {
         let measures = [];    
-        let measureBuffer = [] as bufferEntry[];
+        let measureBuffer = [] as measureBufferEntry[];
+        
+        let currentTpm = this.header.ticksPerBeat * DEFAULT_TIME_SIG.numerator;
+        
+        let tick = 0 + track[0].deltaTime;
+        let measureTick = 0 + track[0].deltaTime;
+        
+        for (let i = 0; i < track.length; i++) {
+            let event = track[i];
 
-        for (let event of tt.event) {
-            let dt = event.deltaTime;
-            measureTick += dt;
-
-            if (measureTick >= this.midiTimings.ticksPerMeasure) {
-                let lastInd = measureBuffer.length - 1;
-                measureBuffer[lastInd].timeToNext = this.midiTimings.ticksPerMeasure - measureBuffer[lastInd].tick;
-
-                let ns = this.createBestNoteSequence(measureBuffer);
-                
-                measures.push(ns);
-                measureBuffer = [];
-                measureTick = measureTick - this.midiTimings.ticksPerMeasure;
-            }
-
-            if (event.type === 9) {
-                let note = new Note(event.data[0]);
-                let velocity = event.data[1];
-
-                if (velocity !== 0) {
+            switch (event.type) {
+                case "timeSignature":
+                    this.timeSigs.push({
+                        tick: tick,
+                        data: event,
+                    });
+                    currentTpm = this.header.ticksPerBeat * event.numerator;
+                    break;
+                case "keySignature":
+                    break;
+                case "noteOn":
                     let lastInd = measureBuffer.length - 1;
+                    console.log(lastInd);
                     if (lastInd >= 0) {
-                        measureBuffer[lastInd].timeToNext = measureTick - measureBuffer[lastInd].tick;
-                    } 
+                        let diff = measureTick - measureBuffer[lastInd].tick;
+                        measureBuffer[lastInd].timeToNext = diff;
+                    }
                     
-                    measureBuffer.push({ note: note, tick: measureTick, duration: null, timeToNext: null });
-                } else {
-                    // let noteOnInd = measureBuffer.findLastIndex(be => be.tick === measureTick - dt);  // Old way of finding note-on
-                    let noteOnInd = measureBuffer.findLastIndex(be => be.note.equals(note));
-                    measureBuffer[noteOnInd].duration = measureTick - measureBuffer[noteOnInd].tick;
-                }
+                    let note = new Note(event.noteNumber);
+                    measureBuffer.push({ data: note, tick: measureTick, duration: null, timeToNext: null });
+                    break;
+                case "noteOff":
+                    let offNote = new Note(event.noteNumber);
+                    let noteOnInd = measureBuffer.findLastIndex(be => be.data.equals(offNote));
+                    
+                    if (measureBuffer[noteOnInd].duration === null) {
+                        measureBuffer[noteOnInd].duration = measureTick - measureBuffer[noteOnInd].tick;
+                    }
+
+                    break;       
+            }
+
+            if (i < track.length - 1) {
+                tick += track[i + 1].deltaTime;
+                measureTick += track[i + 1].deltaTime;
+            }
+            
+            if (measureTick >= currentTpm || i === track.length - 1) {
+                let lastInd = measureBuffer.length - 1;
+                measureBuffer[lastInd].timeToNext = currentTpm - measureBuffer[lastInd].tick;
+
+                let ns = createBestNoteSequence(measureBuffer, currentTpm);
+                measures.push(ns);
+                
+                measureBuffer = [];
+                measureTick = measureTick - currentTpm;
             }
         }
-        
-        let lastInd = measureBuffer.length - 1;
-        measureBuffer[lastInd].timeToNext = this.midiTimings.ticksPerMeasure - measureBuffer[lastInd].tick;
 
-        let ns = this.createBestNoteSequence(measureBuffer);       
-        measures.push(ns);
-        
-
-        console.dir(measures, { depth: null })
-        // console.log(measures);
+        console.dir(measures, { depth: null });
+        return measures;
     }
-
-    createBestNoteSequence(measureBuffer: Record<number, bufferEntry>): NoteSequence {
-        let result = new NoteSequence([], [], []);
-        
-        let measureValues = Object.values(measureBuffer);
-
-        let sameLenNotes: Note[] = [];
-        let sameLensDuration = 0;
-
-        for (let i = 0; i < measureValues.length ; i++) {
-            sameLenNotes.push(measureValues[i].note);
-            sameLensDuration += measureValues[i].timeToNext;
-
-            let thisProportion = measureValues[i].timeToNext / this.midiTimings.ticksPerMeasure;
-            let nextProportion = -1;
-
-            if (i < measureValues.length - 1) {
-                nextProportion = measureValues[i + 1].timeToNext / this.midiTimings.ticksPerMeasure;
-            }
-        
-            let deviation = Math.abs(nextProportion - thisProportion);
-
-            if (deviation > DURATION_TOLERANCE) {  // If durations are close enough, count them as the same duration
-                let subduration = new Fraction(sameLensDuration,
-                    this.midiTimings.ticksPerMeasure).simplify();
-
-                result.append(sameLenNotes, sameLenNotes.length, subduration);
-                sameLenNotes = [];
-            }
-
-        }
-
-        return result;
-    }
-
-    static calculateMidiTimings(meta88obj, timeDivision: number): midiTimings {
-        let data = meta88obj.data;
-
-        let tSig = [ data[0], 2 ** data[1] ] as [number, number];
-
-        let tpq = timeDivision;  // example file: 480
-        let tpb = (4 / tSig[1]) * tpq;  // tpq is quarter note, divide 4 by denominator of key sig, multiply tpq by resulting ratio 
-        let tpMes = tpb * tSig[0];  // example file: 1920
-
-        return {
-            timeSignature: tSig,
-            ticksPerQuarter: tpq,
-            ticksPerBeat: tpb,
-            ticksPerMeasure: tpMes,
-        };
-    }
-
-    // TODO: parse key signature, update "current key signature" as progressing through events
-    // static calculateMidiKeySignature(meta89obj) {
-        
-    // }
 }
