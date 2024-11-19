@@ -82,6 +82,24 @@ export default class MelodyRhythm extends RhythmicSequence<MelRhySeqItem> {
         return result;
     }
 
+    static fromMelodyNotes(melody: NoteSequence): MelodyRhythm {
+        let result = MelodyRhythm.createEmpty(melody.subdivisions, melody.subdurations);
+
+        for (let slice of melody) {
+            let newContent: MelRhySeqItem[];
+
+            let unitSize = slice.subduration.divide(slice.subdivision);
+            if (unitSize.evaluate() < 1/8) {  // Shorter notes are weak
+                newContent = slice.content.map(() => MelodyRhythm.WEAK_BEAT);
+            } else {
+                newContent = slice.content.map(() => MelodyRhythm.STRONG_BEAT);
+            }
+
+            result.setSlice(newContent, slice.index);   
+        }
+
+        return result;
+    }
 
 }
 
