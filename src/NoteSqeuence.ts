@@ -1,9 +1,5 @@
-import RhythmicSequence, { SequenceItem, SequenceReference } from "abstract/RhythmicSequence";
-import Note from "./Note";
+import RhythmicSequence from "abstract/RhythmicSequence";
+import Note from "Note";
+import Fraction from "common/Fraction";
 
-export default class NoteSequence extends RhythmicSequence<Note | null> {
-
-    toMIDI() {
-        
-    }
-}
+export default class NoteSequence extends RhythmicSequence<Note | null> {}

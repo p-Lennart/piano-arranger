@@ -1,6 +1,12 @@
 import RhythmicSequence, { SequenceItem, SequenceReference } from "abstract/RhythmicSequence";
 import Fraction from "common/Fraction";
 import NoteSequence from "NoteSqeuence";
+import { createSolutionBuilder } from "typescript";
+
+const REST_LABEL = "-";
+const SUBDIV_LABEL = ",";
+const STRONG_BEAT_LABEL = "s";
+const WEAK_BEAT_LABEL = "w";
 
 const presets = [
     "s-ww,s-s-,s-ws,-s-w",
@@ -17,46 +23,16 @@ class MelRhySeqItem implements SequenceItem {
     toString(): string {
         return this.label;
     }
+
+    isRest(): boolean {
+        return this.label === REST_LABEL;
+    }
 }
 
 export default class MelodyRhythm extends RhythmicSequence<MelRhySeqItem> {
-    static REST_LABEL = "-";
-    static SUBDIV_LABEL = ",";
-    static STRONG_BEAT = new MelRhySeqItem("s");
-    static WEAK_BEAT = new MelRhySeqItem("w");
-
-    setStrongbeat(ref: SequenceReference) {
-        return super.setItem(ref, MelodyRhythm.STRONG_BEAT);
-    }
-
-    setWeakbeat(ref: SequenceReference) {
-        return super.setItem(ref, MelodyRhythm.WEAK_BEAT);
-    }
-    
-    getStrongbeats() {
-        return super.bulkGet(MelodyRhythm.STRONG_BEAT);
-    }
-
-    getWeakbeats() {
-        return super.bulkGet(MelodyRhythm.WEAK_BEAT);
-    }
-
-    setStrongbeats(refs: SequenceReference[]) {
-        return super.bulkSet(MelodyRhythm.STRONG_BEAT, refs);
-    }
-
-    setWeakbeats(refs: SequenceReference[]) {
-        return super.bulkSet(MelodyRhythm.WEAK_BEAT, refs);
-    }
-
-    static createEmpty(subdivisions: number[], subdurations: Fraction[]): MelodyRhythm {
-        let items = [] as null[];
-        for (let sd of subdivisions) {
-            items.concat(Array(sd).fill(null));
-        }
-
-        return new MelodyRhythm(items, subdivisions, subdurations);
-    }
+    static REST: MelRhySeqItem = null;
+    static STRONG_BEAT = new MelRhySeqItem(STRONG_BEAT_LABEL);
+    static WEAK_BEAT = new MelRhySeqItem(WEAK_BEAT_LABEL);
 
     static fromString(data: string) {
         let items = [];
@@ -88,13 +64,14 @@ export default class MelodyRhythm extends RhythmicSequence<MelRhySeqItem> {
         }
         
         subdivisions[subInd] = subDiv;
-        subdurations = subdivisions.map(n => { return n / items.length });
+        subdurations = subdivisions.map(n => n / items.length);
 
         return new MelodyRhythm(items, subdivisions, subdurations);
     }
 
     static getPresets(filterFn?: (mr: MelodyRhythm) => boolean): MelodyRhythm[] {
-        let result = [];
+        let result: MelodyRhythm[] = [];
+        
         for (let arStr of presets) {
             let ar = MelodyRhythm.fromString(arStr);
             if (filterFn !== undefined && filterFn(ar)) {
@@ -105,12 +82,6 @@ export default class MelodyRhythm extends RhythmicSequence<MelRhySeqItem> {
         return result;
     }
 
-    // static parseMelody(melody: NoteSequence): MelodyRhythm[] {
-    //     let result = [] as MelodyRhythm[];
-    //     for (let i = 0; i < melody.contents.length; i++) {
-    //         result[i] = MelodyRhythm.createEmpty(melody.contents[i].length, melody.subdivisions[i])
-    //     }
-    // }
 
 }
 

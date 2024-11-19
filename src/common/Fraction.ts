@@ -18,6 +18,11 @@ export default class Fraction {
         return new Fraction(newNumerator, this.denominator).simplify();
     }
 
+    divide(number: number): Fraction {
+        const newDenominator = this.denominator * number;
+        return new Fraction(this.numerator, newDenominator).simplify();
+    }
+
     subtract(fraction: Fraction): Fraction {
         return this.add(fraction.scale(-1));
     }

@@ -1,27 +1,34 @@
 import Fraction from "common/Fraction";
 
-export interface SequenceItem {
-    toString(): string,
-}
-
 export interface SequenceReference {
     out: number,
     inn: number,
 }
 
-export default abstract class RhythmicSequence<T extends SequenceItem> {
+export interface SequenceItem {
+    toString(): string,
+}
+
+export interface SequenceSlice<T extends SequenceItem> {
+    content: (T | null)[];
+    subdivision: number;
+    subduration: Fraction;
+    index?: number;
+}
+
+export default abstract class RhythmicSequence<T extends SequenceItem> implements Iterable<SequenceSlice<T>> {
     contents: (T | null)[][];
     subdivisions: number[];
-    subdurations: (number | Fraction)[];
+    subdurations: Fraction[];
     contentMap: Record<string, SequenceReference[]>;
 
     static REST_LABEL = "-";
     static SUBDIV_LABEL = ",";
 
-    constructor(itemSpread: (T | null)[], subdivisions: number[], subdurations?: (number | Fraction)[]) {
+    constructor(contentsSpread: (T | null)[], subdivisions: number[], subdurations?: Fraction[]) {
         this.subdivisions = subdivisions;
         if (subdurations === undefined) {
-            this.subdurations = subdivisions.map(n => { return n / itemSpread.length });
+            this.subdurations = subdivisions.map(n => new Fraction(n, contentsSpread.length).simplify());
         } else {
             this.subdurations = subdurations;
         }
@@ -29,22 +36,72 @@ export default abstract class RhythmicSequence<T extends SequenceItem> {
         this.contents = [];
         this.contentMap = {};
 
-        this.writeContentsAndMap(itemSpread);
+        this.writeContentsAndMap(contentsSpread);
 
+    }
+    [Symbol.iterator](): Iterator<SequenceSlice<T>> {
+        let index = 0;
+
+        let instance = this;
+
+        return {
+            next(): IteratorResult<SequenceSlice<T>> {
+                if (index < instance.contents.length) {
+                    let currentInd = index;
+                    index++;
+                    return { value: instance.getSlice(currentInd), done: false };
+                } else {
+                    return { value: undefined, done: true };
+                }
+            }
+        };
+    }  
+    
+    getSlice(index: number): SequenceSlice<T> {
+        if (index < 0 || index >= this.subdivisions.length) {
+            throw new Error("RhythmicSequence index out of bounds");
+        } 
+
+        return {
+            content: this.contents[index],
+            subdivision: this.subdivisions[index],
+            subduration: this.subdurations[index],
+            index: index,
+        };
+    }
+
+
+    setSlice(content: T[], index: number): void {
+        if (index < 0 || index > this.subdivisions.length) {
+            throw new Error("RhythmicSequence index out of bounds");
+        } else if (content.length !== this.subdivisions[index]) {
+            throw new Error(`New slice for RhythmicSequence must be of length ${this.subdivisions[index]}`);
+        }
+
+        this.contents[index] = content;
+        this.writeContentsAndMap();
+    }
+
+    appendSlice(ss: SequenceSlice<T | null>) {
+        this.contents.push(ss.content);
+        this.subdivisions.push(ss.subdivision);
+        this.subdurations.push(ss.subduration);
+
+        this.writeContentsAndMap();
     }
 
     getItem(ref: SequenceReference): (T | null) {
         let result = this.contents[ref.out]?.[ref.inn];
         if (result === undefined) {
-            throw new Error("RhythmicSequence item reference out of bounds");
+            throw new Error("RhythmicSequence SequenceReference out of bounds");
         }
         return result as (T | null);
     }
 
-    setItem(ref: SequenceReference, item: T | null): void {
+    setItem(item: T | null, ref: SequenceReference): void {
         const outer = this.contents[ref.out];
         if (outer?.[ref.inn] === undefined) {
-            throw new Error("RhythmicSequence item reference out of bounds");
+            throw new Error("RhythmicSequence SequenceReference out of bounds");
         }
     
         outer[ref.inn] = item;
@@ -69,37 +126,21 @@ export default abstract class RhythmicSequence<T extends SequenceItem> {
         return result as SequenceReference[];
     }
 
-    bulkSet(itemSpread: (T | null), refs: SequenceReference[]) {
+    bulkSet(item: (T | null), refs: SequenceReference[]) {
         for (let r of refs) {
-            this.setItem(r, itemSpread);
+            this.setItem(item, r);
         }
-    }
-
-    append(content: T[], subdivision, subduration) {
-        this.contents.push(content);
-        this.subdivisions.push(subdivision);
-        this.subdurations.push(subduration);
-
-        this.writeContentsAndMap();
-    } 
-
-    getRests(): SequenceReference[] {
-        return this.bulkGet(null);
-    }
-
-    setRests(refs: SequenceReference[]) {
-        return this.bulkSet(null, refs);
     }
 
     toString(): string {
         let out = "";
         
-        for (let co of this.contents) {
-            for (let ci of co) {
-                if (ci === null) {
+        for (let cOut of this.contents) {
+            for (let cIn of cOut) {
+                if (cIn === null) {
                     out += RhythmicSequence.REST_LABEL;
                 } else {
-                    out += ci?.toString();
+                    out += cIn?.toString();
                 }
             }
             out += ",";
@@ -108,8 +149,8 @@ export default abstract class RhythmicSequence<T extends SequenceItem> {
         return out.slice(0, -1);  // delete trailing comma
     }
 
-    spreadContents() {
-        let spread = [] as (T | null)[];
+    spreadContents(): (T | null)[] {
+        let spread: (T | null)[] = [];
         for (let c of this.contents) {
             spread = spread.concat(c);
         }
@@ -154,29 +195,31 @@ export default abstract class RhythmicSequence<T extends SequenceItem> {
         this.contents = [];
         this.contentMap = {};
 
-        let subIndex = 0;
-        let contentsBuffer = [];
+        let seqRef: SequenceReference = { out: 0, inn: 0 };
+        let contentsBuffer: (T | null)[] = [];
 
         for (let item of items) {
             contentsBuffer.push(item);
 
-            let key = RhythmicSequence.REST_LABEL;
+            let key: string;
             if (item !== null) {
                 key = item.toString();
+            } else {
+                key = RhythmicSequence.REST_LABEL;
             }
 
-            let mapEntry = this.contentMap[key];
-            if (mapEntry === undefined) {
-                mapEntry = [];
+            if (this.contentMap[key] === undefined) {
+                this.contentMap[key] = [];
             }
+
+            this.contentMap[key].push(seqRef);
+            seqRef = { out: seqRef.out, inn: seqRef.inn + 1 };
             
-            mapEntry.push({ out: subIndex, inn: contentsBuffer.length - 1});
-            this.contentMap[key] = mapEntry;
-            
-            if (contentsBuffer.length === this.subdivisions[subIndex]) {
-                this.contents[subIndex] = contentsBuffer;
+            if (contentsBuffer.length === this.subdivisions[seqRef.out]) {
+                this.contents[seqRef.out] = contentsBuffer;
+                
                 contentsBuffer = [];
-                subIndex += 1;
+                seqRef = { out: seqRef.out + 1, inn: 0 };
             }
         }
 
@@ -206,11 +249,24 @@ export default abstract class RhythmicSequence<T extends SequenceItem> {
         }
     }
 
-    // static createEmpty(subdivisions: number[], subdurations: number[]): RhythmicSequence<T> {
-    //     let items = [] as null[];
-    //     for (let sd of subdivisions) {
-    //         items.concat(Array(sd).fill(null));
-    //     }
-    // }
+    static createEmpty<T, Child extends RhythmicSequence<T>>(
+        this: new (
+          contentsSpread: (T | null)[],
+          subdivisions: number[],
+          subdurations?: Fraction[]
+        ) => Child,
+        subdivisions: number[],
+        subdurations: Fraction[]
+    ): Child {      
+    
+        let items: null[] = [];
+        for (let sd of subdivisions) {
+            for (let i = 0; i < sd; i++) {
+                items.push(null);
+            }
+        }
+
+        return new this(items, subdivisions, subdurations);
+    }
 
 }

@@ -71,7 +71,11 @@ function createBestNoteSequence(measureBuffer: measureBufferEntry[], tpm: number
         if (deviation > DURATION_TOLERANCE) {  // If durations are close enough, count them as the same duration
             let subduration = new Fraction(sameLensDuration,tpm).simplify();
 
-            result.append(sameLenNotes, sameLenNotes.length, subduration);
+            result.appendSlice({
+                content: sameLenNotes,
+                subdivision: sameLenNotes.length,
+                subduration: subduration,
+            });
 
             sameLenNotes = [];
             sameLensDuration = 0;

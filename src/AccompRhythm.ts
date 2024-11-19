@@ -1,6 +1,11 @@
 import RhythmicSequence, { SequenceItem, SequenceReference } from "abstract/RhythmicSequence";
 import MelodyRhythm from "MelodyRhythm";
 
+const REST_LABEL = "-";
+const SUBDIV_LABEL = ","; 
+const DOWN_BEAT_LABEL = "d";
+const UP_BEAT_LABEL = "u";
+
 const presets = [
     "d---,u-d-,--d-,u---",
     "d---,d-u-,--d-,u---",
@@ -24,59 +29,25 @@ class AccRhySeqItem implements SequenceItem {
     toString(): string {
         return this.label;
     }
+
+    isRest(): boolean {
+        return this.label === REST_LABEL;
+    }
+
 }
 
 export default class AccompRhythm extends RhythmicSequence<AccRhySeqItem> {
-    static REST_LABEL = "-";
-    static SUBDIV_LABEL = ",";
-    static DOWN_BEAT = new AccRhySeqItem("d");
-    static UP_BEAT = new AccRhySeqItem("u");
-
-    setDownbeat(ref: SequenceReference) {
-        return super.setItem(ref, AccompRhythm.DOWN_BEAT);
-    }
-
-    setUpbeat(ref: SequenceReference) {
-        return super.setItem(ref, AccompRhythm.UP_BEAT);
-    }
-    
-    getDownbeats() {
-        return super.bulkGet(AccompRhythm.DOWN_BEAT);
-    }
-
-    getUpbeats() {
-        return super.bulkGet(AccompRhythm.UP_BEAT);
-    }
-
-    setDownbeats(refs: SequenceReference[]) {
-        return super.bulkSet(AccompRhythm.DOWN_BEAT, refs);
-    }
-
-    setUpbeats(refs: SequenceReference[]) {
-        return super.bulkSet(AccompRhythm.UP_BEAT, refs);
-    }
-
-    static createEmpty(subdivisions: number[], subdurations?: any[]): AccompRhythm {
-        let items = [];
-        let index = 0;
-
-        for (let sd of subdivisions) {
-            for (let i = 0; i < sd; i++) {
-                items[index] = null;
-                index += 1;
-            }
-        }
-
-        return new AccompRhythm(items, subdivisions, subdurations);
-    }
+    static REST: AccRhySeqItem = null;
+    static DOWN_BEAT = new AccRhySeqItem(DOWN_BEAT_LABEL);
+    static UP_BEAT = new AccRhySeqItem(UP_BEAT_LABEL);
 
     static syncopatedAccomp(mr: MelodyRhythm) {
         let res = AccompRhythm.createEmpty(mr.subdivisions, mr.subdurations);  // Empty init string of same groupings
 
-        res.setUpbeats(mr.getRests());     // Fill rests with upbeats
-        res.setUpbeats(mr.getWeakbeats()); // Fill rests with upbeats
-        res.setRests(mr.getStrongbeats()); // Rest on strong beats
-        res.setItem({ out: 0, inn: 0 }, AccompRhythm.DOWN_BEAT); // Start with downbeat
+        res.bulkSet(AccompRhythm.DOWN_BEAT, mr.bulkGet(MelodyRhythm.REST));     // Fill rests with upbeats
+        res.bulkSet(AccompRhythm.UP_BEAT, mr.bulkGet(MelodyRhythm.WEAK_BEAT));  // Fill weak beats with upbeats
+        res.bulkSet(AccompRhythm.REST, mr.bulkGet(MelodyRhythm.STRONG_BEAT));  // Rest on strong beats
+        res.setItem(AccompRhythm.DOWN_BEAT, { out: 0, inn: 0 });  // Start with downbeat
 
         return res;
     }
@@ -86,18 +57,18 @@ export default class AccompRhythm extends RhythmicSequence<AccRhySeqItem> {
         
         // res.setRests(mr.getWeakbeats()); // Rest during weak beats
         
-        for (let ref of mr.getStrongbeats()) { // Iterate backward through strong beats
+        for (let ref of mr.bulkGet(MelodyRhythm.STRONG_BEAT)) { // Iterate backward through strong beats
             if (mr.checkSpace(ref, -2, [MelodyRhythm.STRONG_BEAT])) { // Two-subbeat leadup (downbeat-upbeat) to upbeat, if applicable
-                res.setDownbeat(mr.incRef(ref, -2))
-                res.setUpbeat(mr.incRef(ref, -1))
+                res.setItem(AccompRhythm.DOWN_BEAT, mr.incRef(ref, -2))
+                res.setItem(AccompRhythm.UP_BEAT, mr.incRef(ref, -1))
             } else if (mr.checkSpace(ref, -1), [MelodyRhythm.STRONG_BEAT]) { // One-subbeat leadup (downbeat) to upbeat, if applicable
-                res.setDownbeat(mr.incRef(ref, -1))
+                res.setItem(AccompRhythm.DOWN_BEAT, mr.incRef(ref, -1))
             }
 
-            res.setUpbeat(ref); // Sync upbeat with strong beat in question
+            res.setItem(AccompRhythm.UP_BEAT, ref); // Sync upbeat with strong beat in question
         }
     
-        res.setDownbeat({ out: 0, inn: 0 }); // Start with downbeat
+        res.setItem(AccompRhythm.DOWN_BEAT, { out: 0, inn: 0 }); // Start with downbeat
 
         return res;
     }
@@ -111,19 +82,19 @@ export default class AccompRhythm extends RhythmicSequence<AccRhySeqItem> {
         
         for (let c of data) {
             switch (c) {
-                case this.DOWN_BEAT.toString(): 
+                case DOWN_BEAT_LABEL: 
                     items.push(this.DOWN_BEAT);
                     subDiv += 1;
                     break;
-                case this.UP_BEAT.toString():
+                case UP_BEAT_LABEL:
                     items.push(this.UP_BEAT);
                     subDiv += 1;
                     break;
-                case this.REST_LABEL:
+                case REST_LABEL:
                     items.push(null);
                     subDiv += 1;
                     break;
-                case this.SUBDIV_LABEL:
+                case SUBDIV_LABEL:
                     subdivisions[subInd] = subDiv;
                     subInd += 1;
                     subDiv = 0;
