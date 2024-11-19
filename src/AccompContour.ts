@@ -1,5 +1,7 @@
-import RhythmicSequence, { SequenceItem, SequenceReference } from "abstract/RhythmicSequence";
+import RhythmicSequence from "abstract/RhythmicSequence";
 import AccompRhythm from "./AccompRhythm";
+import Fraction from "common/Fraction";
+import Note from "Note";
 
 const presets = {
     "straight": [
@@ -40,24 +42,40 @@ const presets = {
     ],
 }
 
-export default class AccompContour extends RhythmicSequence<number> {
+export default class AccompContour extends RhythmicSequence<number | number[]> {
     range: number;
 
-    constructor(items: number[], subdivisions: number[], subdurations?: number[]) {
-        super(items, subdivisions, subdurations);
+    constructor(contents: number[], subdivisions: number[], subdurations?: Fraction[]) {
+        super(contents, subdivisions, subdurations);
         
         let max = 0;
-        for (let offset of items) {
-            if (offset > max) {
-                max = offset;
+        for (let vector of this.spreadContents()) {
+            if (typeof vector === "number" && vector > max) {
+                max = vector;
+            } else if (typeof vector !== "number" && Math.max(...vector) > max) {
+                max = Math.max(...vector);
             }
         }
         
         this.range = max;
     }
 
-    static fromAccompRhythm(ar: AccompRhythm, source: AccompContour) {
-        let resultItems = [];
+    applyAtIndex(index: number, sourceNotes: Note[]): Note[] {
+        let vector = this.spreadContents()[index];
+        if (!vector) {
+            throw new Error("AccompContour access index out of bounds");
+        }
+
+        if (typeof vector === "number") {
+            return [sourceNotes[index]];
+        } else {
+            return vector.map(ind => sourceNotes[ind]);
+        }
+        
+    }
+
+    static fromAccompRhythm(ar: AccompRhythm, source: AccompContour): AccompContour {
+        let contents = [];
 
         let arSpread = ar.spreadContents();
         let sourceSpread = source.spreadContents();
@@ -72,21 +90,21 @@ export default class AccompContour extends RhythmicSequence<number> {
                     pos = 0;
                 }
 
-                resultItems.push(currentValue);
+                contents.push(currentValue);
             } else if (a?.toString() === AccompRhythm.UP_BEAT.toString()) {
                 pos += 1;
-                resultItems.push(currentValue);
+                contents.push(currentValue);
             } else {
                 pos += 1;
-                resultItems.push(currentValue);
+                contents.push(currentValue);
                 // resultValue[i] = NaN;
             }
         }
 
-        return new AccompContour(resultItems, ar.subdivisions);
+        return new AccompContour(contents, ar.subdivisions);
     }
 
-    toAccompRhythm() {
+    toAccompRhythm(): AccompRhythm {
         let resultItems = [AccompRhythm.DOWN_BEAT];
         let contentSpread = this.spreadContents();
 
