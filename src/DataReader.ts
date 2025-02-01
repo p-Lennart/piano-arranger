@@ -149,7 +149,7 @@ export default class DataReader {
                     let offNote = new Note(event.noteNumber);
                     let noteOnInd = measureBuffer.findLastIndex(be => be.data.equals(offNote));
                     
-                    if (measureBuffer[noteOnInd].duration === null) {
+                    if (measureBuffer && measureBuffer[noteOnInd] && measureBuffer[noteOnInd].duration === null) {
                         measureBuffer[noteOnInd].duration = measureTick - measureBuffer[noteOnInd].tick;
                     }
 

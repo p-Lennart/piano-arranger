@@ -67,7 +67,7 @@ export default class AccompContour extends RhythmicSequence<number | number[]> {
         }
 
         if (typeof vector === "number") {
-            return [sourceNotes[index]];
+            return [sourceNotes[vector]];
         } else {
             return vector.map(ind => sourceNotes[ind]);
         }
@@ -128,7 +128,7 @@ export default class AccompContour extends RhythmicSequence<number | number[]> {
         let result = [];
         for (let value of Object.values(presets)) {
             let ar = new AccompContour(value, [4, 4, 4, 4]);
-            if (filterFn !== undefined && filterFn(ar)) {
+            if (filterFn === undefined || filterFn(ar)) {
                 result.push(ar);
             }
         }

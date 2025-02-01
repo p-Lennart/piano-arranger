@@ -23,10 +23,6 @@ class MelRhySeqItem implements SequenceItem {
     toString(): string {
         return this.label;
     }
-
-    isRest(): boolean {
-        return this.label === REST_LABEL;
-    }
 }
 
 export default class MelodyRhythm extends RhythmicSequence<MelRhySeqItem> {

@@ -101,40 +101,44 @@ export default class DataWriter {
                 let chordTicks = chunkTicks / measure.subdivisions[i];
                 
                 for (let chord of chunk) {
-                    for (let note of chord) {
-                        if (note !== null) {
-                            tickedEvents.push({
-                                tick: tick,
-                                data: {
-                                    "deltaTime": 0,
-                                    "running": true,
-                                    "channel": 0,
-                                    "type": "noteOn",
-                                    "noteNumber": note.getValue(),
-                                    "velocity": 80,
-                                },
-                            });
+                    if (chord !== null) {
+                        for (let note of chord) {
+                            if (note !== null) {
+                                tickedEvents.push({
+                                    tick: tick,
+                                    data: {
+                                        "deltaTime": 0,
+                                        "running": true,
+                                        "channel": 0,
+                                        "type": "noteOn",
+                                        "noteNumber": note.getValue(),
+                                        "velocity": 80,
+                                    },
+                                });
+                            }
                         }
-                    };
+                    }
                     
                     tick += chordTicks;
                     
-                    for (let note of chord) {
-                        if (note !== null) {
-                            tickedEvents.push({
-                                tick: tick,
-                                data: {
-                                    "deltaTime": 0,
-                                    "running": true,
-                                    "channel": 0,
-                                    "type": "noteOff",
-                                    "noteNumber": note.getValue(),
-                                    "velocity": 0,
-                                    "byte9": true
-                                },
-                            });
+                    if (chord !== null) {
+                        for (let note of chord) {
+                            if (note !== null) {
+                                tickedEvents.push({
+                                    tick: tick,
+                                    data: {
+                                        "deltaTime": 0,
+                                        "running": true,
+                                        "channel": 0,
+                                        "type": "noteOff",
+                                        "noteNumber": note.getValue(),
+                                        "velocity": 0,
+                                        "byte9": true
+                                    },
+                                });
+                            }
                         }
-                    };
+                    }
                 }
             }
 

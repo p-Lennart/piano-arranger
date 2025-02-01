@@ -1,4 +1,5 @@
 import RhythmicSequence from "abstract/RhythmicSequence";
+import Fraction from "common/Fraction";
 import NoteSequence from "NoteSqeuence";
 import Note from "./Note";
 

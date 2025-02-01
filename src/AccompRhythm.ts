@@ -29,11 +29,6 @@ class AccRhySeqItem implements SequenceItem {
     toString(): string {
         return this.label;
     }
-
-    isRest(): boolean {
-        return this.label === REST_LABEL;
-    }
-
 }
 
 export default class AccompRhythm extends RhythmicSequence<AccRhySeqItem> {
@@ -41,7 +36,7 @@ export default class AccompRhythm extends RhythmicSequence<AccRhySeqItem> {
     static DOWN_BEAT = new AccRhySeqItem(DOWN_BEAT_LABEL);
     static UP_BEAT = new AccRhySeqItem(UP_BEAT_LABEL);
 
-    static syncopatedAccomp(mr: MelodyRhythm) {
+    static syncopatedAccomp(mr: MelodyRhythm): AccompRhythm {
         let res = AccompRhythm.createEmpty(mr.subdivisions, mr.subdurations);  // Empty init string of same groupings
 
         res.bulkSet(AccompRhythm.DOWN_BEAT, mr.bulkGet(MelodyRhythm.REST));     // Fill rests with upbeats

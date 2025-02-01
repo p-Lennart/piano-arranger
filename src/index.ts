@@ -1,7 +1,11 @@
 import AccompRhythm from "AccompRhythm";
-import MelodyRhythm from "./MelodyRhythm";
-import Note from "./Note";
-import Scale from "./Scale";
+import MelodyRhythm from "MelodyRhythm";
+import Note from "Note";
+import Scale from "Scale";
+import DataReader from "DataReader";
+import DataWriter from "DataWriter";
+import ChordSequence from "ChordSequence";
+import ArrangementBuilder from "ArrangementBuilder";
 
 const demoMelody = MelodyRhythm.fromString("s-ww,s-s-,s-ws,-s-w");
 console.log("Demo melody:                ", demoMelody.toString());
@@ -44,3 +48,29 @@ console.log("Spaced span: ");
 demo1Spaced.slice(2,24).forEach(s =>
     process.stdout.write(s.toString() + ", "));
 process.stdout.write("\n");
+
+// console.log(DataReader.findSubDivisor([4,4,6,8]));
+// console.log(DataReader.findSubDivisor([4,4,6,8]));
+
+// let tiff = new DataReader("tifftest.mid");
+
+
+
+let kawaki = new DataReader("./demo/kawakiTest.mid");
+
+let kawakiAcc = new ArrangementBuilder(kawaki.measures, [
+        new Scale("D", Scale.bases.major),
+        new Scale("E", Scale.bases.major),
+        new Scale("F#m", Scale.bases["7th"]),
+        new Scale("B", Scale.bases.major),
+        new Scale("D", Scale.bases.major),
+        new Scale("E", Scale.bases.major),
+        new Scale("D", Scale.bases.major),
+    ]
+).accomp;
+
+new DataWriter("./demo/OUTPUT.mid",
+    kawaki.header,
+    [kawaki.measures.map(ns => ChordSequence.fromNoteSequence(ns)),
+    kawakiAcc],
+    kawaki.timeSigs);

@@ -119,11 +119,11 @@ export default abstract class RhythmicSequence<T extends SequenceItem> implement
             label = item.toString();
         }
 
-        let result = this.contentMap[label];
+        let result: SequenceReference[] = this.contentMap[label];
         if (result === undefined) {
-            throw new Error("Invalid item for bulkGet in RhythmicSequence");
+            return [];
         }
-        return result as SequenceReference[];
+        return result;
     }
 
     bulkSet(item: (T | null), refs: SequenceReference[]) {
